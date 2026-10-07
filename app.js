@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { paused: false, history: [], snapshot: null, temperatureShowAll: false };
+const state = { paused: false, history: [], snapshot: null, temperatureShowAll: false, expandedProcessGroups: new Set() };
 const colors = { cpu: "#e86f51", memory: "#5b8def", grid: "#e5ebe6", text: "#819087" };
 
 function formatBytes(bytes) {
@@ -361,11 +361,74 @@ function renderDisks(disks) {
     return `<div class="disk-row"><div class="disk-label"><strong>${disk.name}</strong><span>${formatBytes(disk.free)} 可用</span></div><div class="disk-bar"><i style="width:${used}%"></i></div></div>`;
   }).join("") : '<p class="empty">未读取到本地磁盘</p>';
 }
+function processDisplayName(name) {
+  const cleanName = String(name || "未知进程").replace(/\.exe$/i, "");
+  const knownNames = { chrome: "Chrome", doubao: "Doubao" };
+  return knownNames[cleanName.toLowerCase()] || cleanName;
+}
+function groupProcesses(processes) {
+  const groups = new Map();
+  for (const process of processes || []) {
+    const label = processDisplayName(process.name);
+    const key = label.toLowerCase();
+    if (!groups.has(key)) groups.set(key, { key, label, items: [], memory: 0, cpuValues: [] });
+    const group = groups.get(key);
+    group.items.push(process);
+    group.memory += Number(process.memory) || 0;
+    if (Number.isFinite(Number(process.cpuPercent))) group.cpuValues.push(Number(process.cpuPercent));
+  }
+  return [...groups.values()].map((group) => ({
+    ...group,
+    cpuPercent: group.cpuValues.length === group.items.length
+      ? group.cpuValues.reduce((sum, value) => sum + value, 0)
+      : null
+  })).sort((a, b) => {
+    const aCpu = Number.isFinite(a.cpuPercent) ? a.cpuPercent : -1;
+    const bCpu = Number.isFinite(b.cpuPercent) ? b.cpuPercent : -1;
+    return bCpu - aCpu || b.memory - a.memory;
+  });
+}
+function formatProcessCpu(value) {
+  if (!Number.isFinite(Number(value))) return "采样中";
+  const cpu = Number(value);
+  return cpu > 0 && cpu < 0.1 ? "<0.1%" : `${cpu.toFixed(1)}%`;
+}
+function processActionButton(pids, label) {
+  const pidList = pids.filter((pid) => Number.isInteger(Number(pid))).join(",");
+  const description = pids.length > 1 ? `结束 ${label} 中的 ${pids.length} 个进程` : `结束 ${label}`;
+  return `<button class="process-kill" type="button" data-process-kill data-pids="${escapeHtml(pidList)}" data-process-label="${escapeHtml(label)}" title="${escapeHtml(description)}">结束进程</button>`;
+}
+function renderProcessRow(process, label, groupKey, index, child = false) {
+  const name = child ? `${label} 子进程 ${index + 1}` : label;
+  return `<tr class="process-child-row" data-process-child-of="${escapeHtml(groupKey)}">
+    <td class="process-name process-name-cell ${child ? "process-child-name" : ""}"><span>${escapeHtml(name)}</span><span class="process-inline-actions">${processActionButton([process.pid], `${label} 子进程`)}</span></td>
+    <td>${formatProcessCpu(process.cpuPercent)}</td>
+    <td>${formatBytes(process.memory)}</td>
+  </tr>`;
+}
 function renderProcesses(processes) {
-  $("#processCount").textContent = `${processes.length} 个进程`;
-  $("#processes").innerHTML = processes.length ? processes.map((process) =>
-    `<tr><td class="process-name">${process.name}</td><td>${process.pid}</td><td>${process.cpuTime.toFixed(1)} 秒</td><td>${formatBytes(process.memory)}</td></tr>`
-  ).join("") : '<tr><td colspan="4" class="empty">未读取到进程</td></tr>';
+  const groups = groupProcesses(processes);
+  const total = (processes || []).length;
+  $("#processCount").textContent = `${groups.length} 个程序 · ${total} 个进程`;
+  if (!groups.length) {
+    $("#processes").innerHTML = '<tr><td colspan="3" class="empty">未读取到进程</td></tr>';
+    return;
+  }
+  $("#processes").innerHTML = groups.map((group) => {
+    const expanded = state.expandedProcessGroups.has(group.key);
+    const hasChildren = group.items.length > 1;
+    const name = hasChildren ? `${group.label} (${group.items.length} 个进程)` : group.label;
+    const toggle = hasChildren
+      ? `<button class="process-group-toggle" type="button" data-process-group-toggle="${escapeHtml(group.key)}" aria-expanded="${expanded}" title="展开或收起子进程"><span class="process-chevron">${expanded ? "▾" : "▸"}</span><span>${escapeHtml(name)}</span></button>`
+      : `<span class="process-single-name">${escapeHtml(name)}</span>`;
+    const groupRow = `<tr class="process-group-row" data-process-group-row="${escapeHtml(group.key)}">
+      <td class="process-name process-name-cell">${toggle}<span class="process-inline-actions">${processActionButton(group.items.map((item) => item.pid), name)}</span></td>
+      <td>${formatProcessCpu(group.cpuPercent)}</td>
+      <td>${formatBytes(group.memory)}</td>
+    </tr>`;
+    const childRows = hasChildren ? group.items.map((process, index) => renderProcessRow(process, group.label, group.key, index, true)).join("") : "";
+    return groupRow + childRows.replace(/<tr /g, `<tr${expanded ? "" : " hidden"} `);
+  }).join("");
 }
 
 function reportItem(level, title, detail) {
@@ -606,9 +669,53 @@ function bindHealthCards() {
     });
   });
 }
+async function terminateProcessFromButton(button) {
+  const pids = String(button.dataset.pids || "").split(",").map(Number).filter((pid) => Number.isInteger(pid) && pid > 0);
+  const label = button.dataset.processLabel || "选中的进程";
+  if (!pids.length) return;
+  const warning = pids.length > 1
+    ? `确定要结束 ${label} 吗？这会同时结束 ${pids.length} 个子进程，未保存的数据可能丢失。`
+    : `确定要结束 ${label} 吗？未保存的数据可能丢失。`;
+  if (!window.confirm(warning)) return;
+  button.disabled = true;
+  button.textContent = "结束中";
+  try {
+    const response = await fetch("/api/process/terminate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pids })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.message || `接口返回 ${response.status}`);
+    $("#status").textContent = result.message || "进程已结束";
+    await refresh();
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "结束进程";
+    $("#status").textContent = `结束失败：${error.message}`;
+  }
+}
+function bindProcessControls() {
+  $("#processes")?.addEventListener("click", (event) => {
+    const killButton = event.target.closest("[data-process-kill]");
+    if (killButton) {
+      event.stopPropagation();
+      terminateProcessFromButton(killButton);
+      return;
+    }
+    const toggle = event.target.closest("[data-process-group-toggle]");
+    if (toggle) {
+      const key = toggle.dataset.processGroupToggle;
+      if (state.expandedProcessGroups.has(key)) state.expandedProcessGroups.delete(key);
+      else state.expandedProcessGroups.add(key);
+      renderProcesses(state.snapshot?.processes || []);
+    }
+  });
+}
 function bindControls() {
   bindDashboardTabs();
   bindHealthCards();
+  bindProcessControls();
 $("#healthRefresh")?.addEventListener("click", async () => {
   const button = $("#healthRefresh");
   button.disabled = true;

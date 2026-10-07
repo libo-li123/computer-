@@ -141,6 +141,24 @@ h2 { font-size: 20px; margin-bottom: 0; letter-spacing: 0; }
 .disk-list { display: grid; gap: 17px; }.disk-row { font-size: 13px; }.disk-label { display: flex; justify-content: space-between; margin-bottom: 7px; }.disk-label span:last-child { color: var(--muted); font-size: 12px; }.disk-bar { background: #edf1ed; height: 8px; }.disk-bar i { background: var(--blue); display: block; height: 100%; }
 .process-panel { padding-bottom: 14px; }.count { background: #eef3ee; border-radius: 999px; color: var(--muted); font-size: 12px; padding: 6px 10px; }
 .table-wrap { overflow-x: auto; } table { border-collapse: collapse; min-width: 650px; width: 100%; } th, td { border-bottom: 1px solid #edf1ed; padding: 12px 8px; text-align: left; } th { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; } td { font-size: 13px; } td:not(:first-child) { color: var(--muted); }.process-name { color: var(--ink); font-weight: 700; }
+.process-table { min-width: 520px; table-layout: fixed; }
+.process-table th:nth-child(1), .process-table td:nth-child(1) { width: 55%; }
+.process-table th:nth-child(2), .process-table td:nth-child(2) { width: 20%; }
+.process-table th:nth-child(3), .process-table td:nth-child(3) { width: 25%; }
+.process-group-row { background: #fff; }
+.process-group-row:hover, .process-child-row:hover { background: #fbfdfb; }
+.process-child-row { background: #f8faf8; }
+.process-child-row .process-name { color: var(--muted); font-weight: 600; padding-left: 30px; }
+.process-name-cell { padding-right: 96px; position: relative; }
+.process-group-toggle { align-items: center; background: transparent; border: 0; color: var(--ink); cursor: pointer; display: inline-flex; font: inherit; font-weight: 700; gap: 7px; max-width: 100%; padding: 0; text-align: left; }
+.process-group-toggle:hover { color: var(--blue); }
+.process-chevron { color: var(--muted); font-size: 13px; width: 10px; }
+.process-single-name { display: inline-block; }
+.process-inline-actions { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); }
+.process-kill { background: #fbe6e2; border: 0; border-radius: 5px; color: #b84f3d; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; opacity: 0; padding: 6px 8px; pointer-events: none; transition: opacity .15s, background .15s; }
+.process-kill:hover { background: #f6d4ce; }
+.process-kill:disabled { cursor: wait; opacity: .65; }
+.process-group-row:hover .process-kill, .process-child-row:hover .process-kill, .process-kill:focus-visible { opacity: 1; pointer-events: auto; }
 .empty { color: var(--muted); font-size: 13px; padding: 20px 0; }.process-panel .empty { text-align: center; }
 footer { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 18px; }
 @media (max-width: 900px) { .shell { padding: 25px 18px; }.topbar { align-items: flex-start; flex-direction: column; }.metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.metric-card-secondary { grid-column: 1 / -1; }.secondary-stat-list { grid-template-columns: 1fr 1px 1fr; align-items: center; }.secondary-divider { border-left: 1px solid var(--line); border-top: 0; height: 72px; }.health-grid { grid-template-columns: repeat(2, 1fr); }.content-grid { grid-template-columns: 1fr; }.report-grid { grid-template-columns: 1fr; }.temperature-overview { grid-template-columns: 1fr; }.temperature-sensor-row { grid-template-columns: minmax(150px, 1fr) minmax(120px, 1fr) minmax(148px, auto); } }
@@ -194,4 +212,9 @@ footer { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 18px;
   .temperature-sensor-summary .temperature-bar { grid-column: 1 / -1; grid-row: 2; }
   .temperature-sensor-summary .temperature-reading { grid-column: 2; grid-row: 1; }
   .temperature-sensor-detail { grid-template-columns: auto minmax(0, 1fr); }
+  .process-table { min-width: 470px; }
+  .process-table th:nth-child(1), .process-table td:nth-child(1) { width: 46%; }
+  .process-table th:nth-child(2), .process-table td:nth-child(2) { width: 21%; }
+  .process-table th:nth-child(3), .process-table td:nth-child(3) { width: 33%; }
+  .process-kill { opacity: 1; pointer-events: auto; }
 }

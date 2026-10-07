@@ -1,30 +1,34 @@
 ﻿{
-    "checkedAt":  "2026-10-07T03:00:08.4324804Z",
-    "batteryRead":  true,
+    "checkedAt":  "2026-10-07T04:55:40.9195917Z",
+    "batteryRead":  false,
     "battery":  [
-                    {
-                        "charge":  100,
-                        "status":  2
-                    }
+
                 ],
-    "physicalDisksRead":  true,
+    "physicalDisksRead":  false,
     "physicalDisks":  [
-                          {
-                              "name":  "SKHynix_HFS512GD9TNI-L2A0B",
-                              "health":  "Healthy",
-                              "status":  [
-                                             "OK"
-                                         ],
-                              "mediaType":  "SSD",
-                              "busType":  "NVMe",
-                              "size":  512110190592
-                          }
+
                       ],
     "securityRead":  true,
     "antivirus":  [
                       {
-                          "name":  "Windows Defender",
-                          "state":  397568
+                          "name":  "Windows Defender Firewall",
+                          "state":  1,
+                          "source":  "Windows service"
+                      },
+                      {
+                          "name":  "Windows 安全中心服务",
+                          "state":  1,
+                          "source":  "Windows service"
+                      },
+                      {
+                          "name":  "Microsoft Defender 防病毒服务",
+                          "state":  1,
+                          "source":  "Windows service"
+                      },
+                      {
+                          "name":  "Security Center",
+                          "state":  1,
+                          "source":  "Windows service"
                       }
                   ],
     "hardwareRead":  true,
@@ -36,76 +40,88 @@
                  },
     "processes":  [
                       {
+                          "name":  "webstorm64",
+                          "pid":  23588,
+                          "cpuTime":  1124.8125,
+                          "cpuPercent":  2,
+                          "memory":  1998782464
+                      },
+                      {
                           "name":  "Doubao",
                           "pid":  2996,
-                          "cpuTime":  321.96875,
-                          "memory":  342786048
+                          "cpuTime":  886.75,
+                          "cpuPercent":  1,
+                          "memory":  340684800
                       },
                       {
                           "name":  "ChatGPT",
                           "pid":  21484,
-                          "cpuTime":  163.46875,
-                          "memory":  595243008
-                      },
-                      {
-                          "name":  "powershell",
-                          "pid":  3860,
-                          "cpuTime":  151.15625,
-                          "memory":  129597440
-                      },
-                      {
-                          "name":  "webstorm64",
-                          "pid":  23588,
-                          "cpuTime":  150.78125,
-                          "memory":  2570641408
+                          "cpuTime":  609.703125,
+                          "cpuPercent":  1,
+                          "memory":  517869568
                       },
                       {
                           "name":  "wps",
                           "pid":  14448,
-                          "cpuTime":  140.359375,
-                          "memory":  194535424
-                      },
-                      {
-                          "name":  "Doubao",
-                          "pid":  2420,
-                          "cpuTime":  105.421875,
-                          "memory":  158187520
-                      },
-                      {
-                          "name":  "chrome",
-                          "pid":  15116,
-                          "cpuTime":  97.859375,
-                          "memory":  123924480
+                          "cpuTime":  607.890625,
+                          "cpuPercent":  1,
+                          "memory":  171102208
                       },
                       {
                           "name":  "ChatGPT",
                           "pid":  8008,
-                          "cpuTime":  88,
-                          "memory":  145330176
+                          "cpuTime":  393.28125,
+                          "cpuPercent":  0,
+                          "memory":  126300160
                       },
                       {
-                          "name":  "explorer",
-                          "pid":  2856,
-                          "cpuTime":  82.203125,
-                          "memory":  196227072
+                          "name":  "Doubao",
+                          "pid":  2420,
+                          "cpuTime":  256.375,
+                          "cpuPercent":  1,
+                          "memory":  158748672
                       },
                       {
                           "name":  "LibreHardwareMonitor",
                           "pid":  3588,
-                          "cpuTime":  74.453125,
-                          "memory":  96837632
+                          "cpuTime":  198.265625,
+                          "cpuPercent":  0,
+                          "memory":  97538048
                       },
                       {
                           "name":  "chrome",
-                          "pid":  14816,
-                          "cpuTime":  69.140625,
-                          "memory":  253747200
+                          "pid":  15116,
+                          "cpuTime":  135.265625,
+                          "cpuPercent":  0,
+                          "memory":  102121472
                       },
                       {
                           "name":  "ChatGPT",
                           "pid":  980,
-                          "cpuTime":  59.53125,
-                          "memory":  430911488
+                          "cpuTime":  128.65625,
+                          "cpuPercent":  1,
+                          "memory":  331866112
+                      },
+                      {
+                          "name":  "explorer",
+                          "pid":  2856,
+                          "cpuTime":  125.75,
+                          "cpuPercent":  0,
+                          "memory":  185999360
+                      },
+                      {
+                          "name":  "Doubao",
+                          "pid":  16380,
+                          "cpuTime":  113.28125,
+                          "cpuPercent":  0,
+                          "memory":  146526208
+                      },
+                      {
+                          "name":  "Doubao",
+                          "pid":  7980,
+                          "cpuTime":  110.78125,
+                          "cpuPercent":  0,
+                          "memory":  149053440
                       }
                   ]
 }

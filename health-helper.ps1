@@ -10,7 +10,13 @@ try {
     exit 0
   }
 
+  $previousProcessCpu = @{}
+  $previousProcessSampleAt = [DateTime]::UtcNow
+
   while ($true) {
+    $processSampleAt = [DateTime]::UtcNow
+    $logicalProcessors = [Math]::Max(1, [Environment]::ProcessorCount)
+    $currentProcessCpu = @{}
     $batteryRead = $true
     $physicalDisksRead = $true
     $securityRead = $true
@@ -90,10 +96,24 @@ try {
           try { $cpuTime = [double]$_.CPU } catch {}
           try { $memory = [long]$_.WorkingSet64 } catch {}
           if ($memory -gt 0) {
+            $cpuPercent = $null
+            $previous = $previousProcessCpu[[int]$_.Id]
+            if ($null -ne $previous) {
+              $elapsed = ($processSampleAt - $previous.sampleAt).TotalSeconds
+              $delta = $cpuTime - $previous.cpuTime
+              if ($elapsed -gt 0.2 -and $delta -ge 0) {
+                $cpuPercent = [Math]::Round([Math]::Max(0, [Math]::Min(100, ($delta / $elapsed / $logicalProcessors) * 100)), 1)
+              }
+            }
+            $currentProcessCpu[[int]$_.Id] = [ordered]@{
+              cpuTime = $cpuTime
+              sampleAt = $processSampleAt
+            }
             [PSCustomObject]@{
               name = [string]$_.ProcessName
               pid = [int]$_.Id
               cpuTime = $cpuTime
+              cpuPercent = $cpuPercent
               memory = $memory
             }
           }
@@ -117,6 +137,8 @@ try {
 
     $payload | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $temporaryPath -Encoding UTF8
     Move-Item -LiteralPath $temporaryPath -Destination $cachePath -Force
+    $previousProcessCpu = $currentProcessCpu
+    $previousProcessSampleAt = $processSampleAt
     Start-Sleep -Seconds 30
   }
 } catch {

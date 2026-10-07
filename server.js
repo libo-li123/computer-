@@ -11,6 +11,9 @@ const host = process.env.HOST || "0.0.0.0";
 const healthCachePath = path.join(root, "health-cache.json");
 let lastCpu = null;
 let temperatureRefreshRunning = false;
+let processRefreshRunning = false;
+let processSamples = new Map();
+let processDataUpdatedAt = 0;
 let cachedDetails = {
   disks: [],
   processes: [],
@@ -78,6 +81,40 @@ function cpuPercent() {
   return total ? Math.max(0, Math.min(100, (1 - idle / total) * 100)) : 0;
 }
 
+function normalizeProcessSnapshot(value) {
+  return (Array.isArray(value) ? value : [value]).filter(Boolean).map((item) => ({
+    name: String(item.Name ?? item.name ?? "未知进程"),
+    pid: Number(item.Id ?? item.pid),
+    cpuTime: Number(item.CPU ?? item.cpuTime ?? 0),
+    memory: Number(item.WorkingSet64 ?? item.memory ?? 0),
+    directCpuPercent: Number(item.CpuPercent ?? item.cpuPercent)
+  })).filter((item) => Number.isInteger(item.pid) && item.pid > 0 && Number.isFinite(item.cpuTime));
+}
+
+function applyProcessCpuUsage(processes) {
+  const now = Date.now();
+  const logicalProcessors = Math.max(1, os.cpus().length);
+  const nextSamples = new Map();
+  const measured = processes.map((item) => {
+    const previous = processSamples.get(item.pid);
+    const elapsed = previous ? (now - previous.at) / 1000 : 0;
+    const delta = previous ? item.cpuTime - previous.cpuTime : 0;
+    const directCpu = Number(item.directCpuPercent);
+    const normalizedDirectCpu = Number.isFinite(directCpu)
+      ? (directCpu > 100 ? directCpu / logicalProcessors : directCpu)
+      : null;
+    const cpuPercent = normalizedDirectCpu != null
+      ? Math.max(0, Math.min(100, normalizedDirectCpu))
+      : elapsed > 0.2 && delta >= 0
+      ? Math.max(0, Math.min(100, delta / elapsed / logicalProcessors * 100))
+      : null;
+    nextSamples.set(item.pid, { cpuTime: item.cpuTime, at: now });
+    return { ...item, cpuPercent };
+  });
+  processSamples = nextSamples;
+  return measured;
+}
+
 function readLocalDisks() {
   if (typeof fs.statfsSync !== "function") return [];
   const disks = [];
@@ -108,13 +145,23 @@ function mergeHealthCache(details) {
   const cache = readHealthCache();
   if (!cache) return details;
   const systemHealth = { ...details.systemHealth };
+  const cachedProcesses = Array.isArray(cache.processes) ? cache.processes : [];
+  let processes = details.processes;
   if (cache.batteryRead === true) systemHealth.battery = Array.isArray(cache.battery) ? cache.battery : [];
   if (cache.physicalDisksRead === true) {
     systemHealth.physicalDisks = Array.isArray(cache.physicalDisks) ? cache.physicalDisks : [];
   }
   if (cache.securityRead === true) systemHealth.antivirus = Array.isArray(cache.antivirus) ? cache.antivirus : [];
-  if (Array.isArray(cache.processes) && cache.processes.length) {
-    details.processes = cache.processes;
+  if (!processes?.length && cachedProcesses.length) {
+    processes = cachedProcesses;
+  } else if (processes?.length && cachedProcesses.length) {
+    const cachedCpuByPid = new Map(cachedProcesses.map((item) => [Number(item.pid), item.cpuPercent]));
+    processes = processes.map((item) => {
+      const cachedCpu = cachedCpuByPid.get(Number(item.pid));
+      const hasLiveCpu = item.cpuPercent !== null && item.cpuPercent !== undefined && Number.isFinite(Number(item.cpuPercent));
+      const hasCachedCpu = cachedCpu !== null && cachedCpu !== undefined && Number.isFinite(Number(cachedCpu));
+      return !hasLiveCpu && hasCachedCpu ? { ...item, cpuPercent: Number(cachedCpu) } : item;
+    });
   }
   systemHealth.healthCacheCheckedAt = cache.checkedAt || null;
   let hardware = details.hardware;
@@ -135,7 +182,40 @@ function mergeHealthCache(details) {
       source: "Windows registry + Node.js"
     };
   }
-  return { ...details, hardware, hostInfo, systemHealth };
+  return { ...details, processes, hardware, hostInfo, systemHealth };
+}
+
+function enrichHardwareFromCache(details) {
+  const cache = readHealthCache();
+  if (!cache) return details;
+  const cachedHardware = cache.hardware && typeof cache.hardware === "object" ? cache.hardware : {};
+  const cachedSpecs = cache.hardwareSpecs && typeof cache.hardwareSpecs === "object" ? cache.hardwareSpecs : {};
+  const hardware = { ...details.hardware };
+  const hostInfo = { ...details.hostInfo };
+  if (cachedHardware.gpuName) {
+    hardware.gpuName = cachedHardware.gpuName;
+    hostInfo.gpuName = cachedHardware.gpuName;
+  }
+  if (Number(cachedHardware.memorySpeedMHz) > 0) {
+    hardware.memorySpeedMHz = Number(cachedHardware.memorySpeedMHz);
+    hostInfo.memorySpeedMHz = Number(cachedHardware.memorySpeedMHz);
+  }
+  if (Number(cachedSpecs.memorySpeedMHz) > 0 && !hardware.memorySpeedMHz) {
+    hardware.memorySpeedMHz = Number(cachedSpecs.memorySpeedMHz);
+    hostInfo.memorySpeedMHz = Number(cachedSpecs.memorySpeedMHz);
+  }
+  if (cachedSpecs.smartRead === true) {
+    const physicalDisks = (details.systemHealth.physicalDisks || []).map((disk) => {
+      const smart = (cachedSpecs.smartDisks || []).find((item) =>
+        String(item.serialNumber || "") === String(disk.serialNumber || "") ||
+        String(item.deviceId || "").toLowerCase() === String(disk.deviceId || "").toLowerCase() ||
+        (item.name && disk.name && String(item.name).toLowerCase() === String(disk.name).toLowerCase())
+      );
+      return smart ? { ...disk, ...smart } : disk;
+    });
+    details = { ...details, systemHealth: { ...details.systemHealth, physicalDisks } };
+  }
+  return { ...details, hardware, hostInfo };
 }
 
 function readLocalJson(url) {
@@ -408,7 +488,7 @@ async function refreshDetails() {
     $processes = Get-Process |
       Where-Object { $_.CPU -ne $null } |
       Sort-Object CPU -Descending |
-      Select-Object -First 12 Name,Id,CPU,WorkingSet64;
+      Select-Object -First 40 Name,Id,CPU,WorkingSet64;
     [PSCustomObject]@{
       disks = @($disks);
       system = $system;
@@ -454,13 +534,8 @@ async function refreshDetails() {
       total: Number(disk.Size || 0),
       free: Number(disk.FreeSpace || 0)
     }));
-  const processes = (Array.isArray(data.processes) ? data.processes : [data.processes]).filter(Boolean)
-    .map((process) => ({
-      name: process.Name,
-      pid: process.Id,
-      cpuTime: Number(process.CPU || 0),
-      memory: Number(process.WorkingSet64 || 0)
-    }));
+  const processes = applyProcessCpuUsage(normalizeProcessSnapshot(data.processes));
+  const processSnapshotAt = Date.now();
   const battery = (Array.isArray(data.battery) ? data.battery : [data.battery]).filter(Boolean)
     .map((item) => ({
       charge: Number(item.EstimatedChargeRemaining),
@@ -542,7 +617,43 @@ async function refreshDetails() {
     detailsLoading: false,
     detailsError: null
   };
-  cachedDetails = completed;
+  cachedDetails = {
+    ...completed,
+    processes: processDataUpdatedAt > processSnapshotAt ? cachedDetails.processes : processes
+  };
+}
+
+async function refreshProcesses() {
+  if (processRefreshRunning) return;
+  processRefreshRunning = true;
+  const ps = `
+    $perfByPid = @{};
+    try {
+      Get-CimInstance Win32_PerfFormattedData_PerfProc_Process -ErrorAction Stop |
+        ForEach-Object { $perfByPid[[int]$_.IDProcess] = [double]$_.PercentProcessorTime }
+    } catch {}
+    $processes = Get-Process -ErrorAction SilentlyContinue |
+      Where-Object { $_.CPU -ne $null } |
+      Sort-Object CPU -Descending |
+      Select-Object -First 40 |
+      ForEach-Object {
+        $cpuPercent = if ($perfByPid.ContainsKey($_.Id)) { $perfByPid[$_.Id] } else { $null };
+        [PSCustomObject]@{ Name = $_.Name; Id = $_.Id; CPU = $_.CPU; WorkingSet64 = $_.WorkingSet64; CpuPercent = $cpuPercent }
+      };
+    @($processes) | ConvertTo-Json -Depth 3 -Compress
+  `;
+  try {
+    const raw = await powershell(ps);
+    const processes = applyProcessCpuUsage(normalizeProcessSnapshot(JSON.parse(raw)));
+    if (processes.length) {
+      processDataUpdatedAt = Date.now();
+      cachedDetails = { ...cachedDetails, processes };
+    }
+  } catch {
+    // Keep the previous process snapshot when a transient process query fails.
+  } finally {
+    processRefreshRunning = false;
+  }
 }
 
 function getStats() {
@@ -583,10 +694,87 @@ function sendJson(response, body, status = 200) {
   response.end(JSON.stringify(body));
 }
 
+function readJson(request) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    request.on("data", (chunk) => {
+      body += chunk.toString("utf8");
+      if (body.length > 32 * 1024) reject(new Error("请求内容过大"));
+    });
+    request.on("end", () => {
+      try { resolve(body ? JSON.parse(body) : {}); } catch { reject(new Error("请求数据格式错误")); }
+    });
+    request.on("error", reject);
+  });
+}
+
+async function terminateObservedProcesses(pids) {
+  const requested = [...new Set((Array.isArray(pids) ? pids : []).map(Number)
+    .filter((pid) => Number.isInteger(pid) && pid > 0))];
+  if (!requested.length || requested.length > 40) {
+    return { status: 400, body: { ok: false, message: "请选择有效的进程" } };
+  }
+  const tracked = new Map(cachedDetails.processes.map((item) => [Number(item.pid), item]));
+  const untracked = requested.filter((pid) => !tracked.has(pid));
+  if (untracked.length) {
+    return { status: 400, body: { ok: false, message: "进程已不在当前观察列表，请刷新后重试" } };
+  }
+  const protectedNames = /^(idle|system|registry|smss|csrss|wininit|services|lsass|svchost|dwm|winlogon)$/i;
+  const blocked = requested.filter((pid) => pid === process.pid || protectedNames.test(tracked.get(pid)?.name || ""));
+  if (blocked.length) {
+    return { status: 403, body: { ok: false, message: "系统进程或观察器进程不能通过此按钮结束" } };
+  }
+  const idList = requested.join(",");
+  const script = `
+    $ids = @(${idList});
+    $results = foreach ($id in $ids) {
+      try {
+        $item = Get-Process -Id $id -ErrorAction Stop;
+        $name = $item.ProcessName;
+        Stop-Process -Id $id -Force -ErrorAction Stop;
+        [PSCustomObject]@{ pid = $id; name = $name; ok = $true; message = "已结束" }
+      } catch {
+        [PSCustomObject]@{ pid = $id; name = ""; ok = $false; message = $_.Exception.Message }
+      }
+    };
+    @($results) | ConvertTo-Json -Depth 3 -Compress
+  `;
+  try {
+    const parsed = JSON.parse(await powershell(script));
+    const results = Array.isArray(parsed) ? parsed : [parsed];
+    const terminated = results.filter((item) => item && item.ok).map((item) => Number(item.pid));
+    if (terminated.length) {
+      cachedDetails = { ...cachedDetails, processes: cachedDetails.processes.filter((item) => !terminated.includes(Number(item.pid))) };
+      terminated.forEach((pid) => processSamples.delete(pid));
+      setTimeout(refreshProcesses, 150);
+    }
+    return {
+      status: 200,
+      body: {
+        ok: terminated.length > 0,
+        terminated,
+        failed: results.filter((item) => item && !item.ok).map((item) => ({ pid: Number(item.pid), message: item.message })),
+        message: terminated.length ? `已结束 ${terminated.length} 个进程` : "进程未结束，可能权限不足或已退出"
+      }
+    };
+  } catch (error) {
+    return { status: 500, body: { ok: false, message: `结束进程失败：${error.message}` } };
+  }
+}
+
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
   if (url.pathname === "/api/stats") {
     return sendJson(response, getStats());
+  }
+  if (url.pathname === "/api/process/terminate" && request.method === "POST") {
+    try {
+      const payload = await readJson(request);
+      const result = await terminateObservedProcesses(payload.pids);
+      return sendJson(response, result.body, result.status);
+    } catch (error) {
+      return sendJson(response, { ok: false, message: error.message }, 400);
+    }
   }
   if (url.pathname === "/api/health/refresh" && request.method === "POST") {
     refreshDetails();
@@ -609,7 +797,9 @@ const server = http.createServer(async (request, response) => {
 server.listen(port, host, () => {
   console.log(`PC Observer running at http://${host}:${port}`);
   refreshDetails();
+  refreshProcesses();
   refreshTemperatureFromMonitor();
   setInterval(refreshDetails, 60_000);
+  setInterval(refreshProcesses, 3_000);
   setInterval(refreshTemperatureFromMonitor, 3_000);
 });
