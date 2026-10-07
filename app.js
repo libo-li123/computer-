@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { paused: false, history: [], snapshot: null, temperatureShowAll: false, expandedProcessGroups: new Set() };
+const state = { paused: false, history: [], snapshot: null, temperatureShowAll: false, expandedProcessGroups: new Set(), ecoMode: null };
 const colors = { cpu: "#e86f51", memory: "#5b8def", grid: "#e5ebe6", text: "#819087" };
 
 function formatBytes(bytes) {
@@ -91,6 +91,43 @@ function renderHardwareCheck(data) {
   ];
   const panel = $("#hardwareCheckPanel");
   if (panel) panel.innerHTML = rows.map(([name, value, detail]) => `<div class="hardware-row"><strong>${name}</strong><span>${value}</span><small>${detail}</small></div>`).join("");
+}
+function renderHardwareOverview(data) {
+  const hardware = data.hostInfo || data.hardware || {};
+  const health = data.systemHealth || {};
+  const hardwareSpecs = data.hardwareSpecs || {};
+  const disks = health.physicalDisks || [];
+  const rows = [
+    ["显卡", hardware.gpuName || "不支持/未读取", hardware.gpuName ? `${hardware.gpuMemoryBytes ? formatBytes(hardware.gpuMemoryBytes) + " 显存" : "显存容量未提供"}${hardware.gpuDriverVersion ? ` · 驱动 ${hardware.gpuDriverVersion}` : ""}` : "系统未返回显示适配器型号"],
+    ["内存规格", hardware.memoryDataRateMTs ? `${hardware.memoryDataRateMTs} MT/s` : "不支持/未读取", `${hardware.memoryBytes ? formatBytes(hardware.memoryBytes) : "容量未知"} · ${hardware.memoryModuleCount ? `${hardware.memoryModuleCount} 条内存` : "条数未提供"} · ${hardware.memoryDataRateSource || "内存速率为规格推算，不是实时频率"}`],
+    ...(disks.length ? disks : [{ name: "物理磁盘", smartRead: false, smartReason: "系统没有提供物理磁盘或可靠性计数器" }]).map((disk) => {
+      const smartEntry = (hardwareSpecs.smartDisks || []).find((item) =>
+        (item.name && disk.name && String(item.name).toLowerCase() === String(disk.name).toLowerCase()) ||
+        (item.deviceId && disk.deviceId && String(item.deviceId).toLowerCase() === String(disk.deviceId).toLowerCase()) ||
+        (item.serialNumber && disk.serialNumber && item.serialNumber === disk.serialNumber)
+      );
+      const smartRead = disk.smartRead === true || smartEntry?.smartRead === true;
+      const wear = Number(disk.wearPercent);
+      const temperature = Number(disk.temperatureCelsius ?? smartEntry?.temperatureCelsius);
+      const smartErrors = Number(smartEntry?.readErrorsTotal || 0) + Number(smartEntry?.writeErrorsTotal || 0);
+      const smartIssue = (disk.health && !/^healthy$/i.test(disk.health)) || (Number.isFinite(wear) && wear >= 80) ||
+        ((disk.temperatureCelsius != null || smartEntry?.temperatureCelsius != null) && Number.isFinite(temperature) && temperature >= 70) || smartErrors > 0;
+      const smartStatus = !smartRead ? "SMART 不支持" : smartIssue ? "需关注" : "SMART 正常";
+      const details = [disk.mediaType, disk.busType, disk.health ? `系统状态 ${disk.health}` : null,
+        disk.temperatureCelsius != null || smartEntry?.temperatureCelsius != null ? `${disk.temperatureCelsius ?? smartEntry.temperatureCelsius}°C` : null,
+        disk.wearPercent != null || smartEntry?.wearPercent != null ? `磨损 ${disk.wearPercent ?? smartEntry.wearPercent}%` : null,
+        disk.powerOnHours != null || smartEntry?.powerOnHours != null ? `通电 ${disk.powerOnHours ?? smartEntry.powerOnHours} 小时` : null,
+        disk.smartReason, smartEntry?.reason, !hardwareSpecs.smartChecked && !smartRead ? "等待 S.M.A.R.T. 采样" : null].filter(Boolean).join(" · ");
+      return [`磁盘 · ${disk.name || "物理磁盘"}`, smartStatus, details || (smartRead ? "已读取设备可靠性计数器" : "设备/驱动未提供 S.M.A.R.T. 可靠性数据")];
+    })
+  ];
+  const panel = $("#hardwareOverview");
+  if (panel) panel.innerHTML = rows.map(([name, value, detail]) => {
+    const statusClass = value === "需关注" ? " is-warning" : /^(不支持|不支持\/未读取|SMART 不支持)$/.test(value) ? " is-unavailable" : "";
+    return `<article class="hardware-spec-row${statusClass}"><strong>${escapeHtml(name)}</strong><span class="hardware-spec-value">${escapeHtml(value)}</span><small>${escapeHtml(detail)}</small></article>`;
+  }).join("");
+  const updated = $("#hardwareSpecsUpdated");
+  if (updated) updated.textContent = data.detailsLoading ? "正在更新" : data.detailsUpdatedAt ? `采集于 ${new Date(data.detailsUpdatedAt).toLocaleTimeString()}` : "等待采集";
 }
 function renderTemperatureDetails(data) {
   const health = data.systemHealth || {};
@@ -596,6 +633,8 @@ function renderAnalysisReport(data) {
 
 function render(data) {
   state.snapshot = data;
+  if (data.ecoMode) state.ecoMode = data.ecoMode;
+  updateEcoModeButton();
   const memory = data.memory.used / data.memory.total * 100;
   $("#host").textContent = `${data.host} · ${data.platform}`;
   $("#updated").textContent = `更新于 ${new Date(data.timestamp).toLocaleTimeString()}`;
@@ -611,6 +650,7 @@ function render(data) {
   state.history.push({ cpu: data.cpu, memory }); if (state.history.length > 40) state.history.shift();
   renderHealth(data);
   renderHardwareCheck(data);
+  renderHardwareOverview(data);
   renderAnalysisReport(data);
   renderTemperatureDetails(data);
   if (data.disks?.length) {
@@ -712,10 +752,87 @@ function bindProcessControls() {
     }
   });
 }
+function ecoCandidateProcesses() {
+  const processes = state.snapshot?.processes || [];
+  return groupProcesses(processes)
+    .map((group) => ({ ...group, score: Number(group.cpuPercent) || 0 }))
+    .filter((group) => group.score >= 5 && group.items.every((item) => !/^(system|registry|smss|csrss|wininit|services|lsass|svchost|dwm|winlogon|explorer|pc-observer)$/i.test(item.name)))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6);
+}
+function renderEcoCandidates() {
+  const container = $("#ecoProcessCandidates");
+  if (!container) return;
+  const candidates = ecoCandidateProcesses();
+  container.innerHTML = candidates.length ? candidates.map((group) => `
+    <label class="eco-candidate"><input type="checkbox" value="${escapeHtml(group.key)}" checked>
+      <span><strong>${escapeHtml(group.label)}${group.items.length > 1 ? ` (${group.items.length} 个进程)` : ""}</strong><small>CPU ${formatProcessCpu(group.cpuPercent)} · 内存 ${formatBytes(group.memory)}</small></span>
+    </label>`).join("") : '<p class="empty">当前没有 CPU 占用较高且适合限制的进程。</p>';
+}
+function updateEcoModeButton() {
+  const button = $("#ecoModeToggle");
+  if (!button) return;
+  const active = Boolean(state.ecoMode?.active);
+  const health = state.snapshot?.systemHealth || {};
+  const highest = Math.max(0, ...(health.temperatures || []).map(Number).filter(Number.isFinite));
+  const onBattery = (health.battery || []).some((item) => [1, 4].includes(Number(item.status)));
+  const recommended = highest >= 85 || onBattery;
+  button.textContent = active ? "退出节能模式" : recommended ? "建议节能模式" : "节能模式";
+  button.classList.toggle("is-eco-active", active);
+  button.classList.toggle("is-eco-recommended", !active && recommended);
+  button.setAttribute("aria-pressed", String(active));
+}
+function openEcoModeDialog() {
+  const active = Boolean(state.ecoMode?.active);
+  const health = state.snapshot?.systemHealth || {};
+  const highest = Math.max(0, ...(health.temperatures || []).map(Number).filter(Number.isFinite));
+  const battery = (health.battery || []).find((item) => Number(item.status) === 1 || Number(item.status) === 4);
+  $("#ecoDialogTitle").textContent = active ? "退出节能模式？" : "启用节能模式？";
+  $("#ecoDialogDescription").textContent = active
+    ? "将恢复本次节能操作调整过的进程优先级。"
+    : `当前最高温度 ${highest ? `${highest.toFixed(1)}°C` : "未读取"}${battery ? " · 当前为电池供电" : ""}。启用后只会降低勾选程序的 CPU 调度优先级，不会结束进程；个别程序响应速度可能下降。`;
+  $("#ecoLimitProcesses").checked = true;
+  $("#ecoLimitProcesses").closest(".eco-setting").hidden = active;
+  $("#ecoProcessCandidates").hidden = active;
+  $("#ecoConfirm").textContent = active ? "退出并恢复" : "启用节能模式";
+  renderEcoCandidates();
+  $("#ecoModeDialog")?.showModal();
+}
+async function toggleEcoMode() {
+  const enabling = !state.ecoMode?.active;
+  const limitProcesses = !$("#ecoLimitProcesses").closest(".eco-setting").hidden && $("#ecoLimitProcesses").checked;
+  const selectedGroups = [...document.querySelectorAll("#ecoProcessCandidates input:checked")].map((input) => input.value);
+  const pids = (state.snapshot?.processes || []).filter((item) => selectedGroups.includes(processDisplayName(item.name).toLowerCase())).map((item) => item.pid);
+  const button = $("#ecoConfirm");
+  button.disabled = true;
+  try {
+    const response = await fetch("/api/eco-mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: enabling, limitProcesses, pids })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.message || `接口返回 ${response.status}`);
+    state.ecoMode = result.ecoMode;
+    updateEcoModeButton();
+    $("#status").textContent = result.message;
+    $("#ecoModeDialog").close();
+    await refresh();
+  } catch (error) {
+    $("#status").textContent = `节能模式操作失败：${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+}
 function bindControls() {
   bindDashboardTabs();
   bindHealthCards();
   bindProcessControls();
+  $("#ecoModeToggle")?.addEventListener("click", openEcoModeDialog);
+  $("#ecoConfirm")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    toggleEcoMode();
+  });
 $("#healthRefresh")?.addEventListener("click", async () => {
   const button = $("#healthRefresh");
   button.disabled = true;

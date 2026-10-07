@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>电脑使用观察器</title>
-  <link rel="stylesheet" href="/styles.css?v=20261007-processes2">
+  <link rel="stylesheet" href="/styles.css?v=20261007-hardware-eco1">
 </head>
 <body>
   <main class="shell">
@@ -17,6 +17,7 @@
       <div class="actions">
         <button id="pause" class="button secondary" title="暂停或继续自动刷新">暂停</button>
         <button id="analysisReportToggle" class="button secondary" aria-expanded="false" title="查看电脑健康分析报告">分析报告</button>
+        <button id="ecoModeToggle" class="button secondary eco-toggle" aria-pressed="false" title="仅限制你明确选择的程序，随时可恢复">节能模式</button>
         <button id="export" class="button primary" title="导出当前系统快照">导出快照</button>
       </div>
     </header>
@@ -91,6 +92,13 @@
             <article class="health-item" data-health-card role="button" tabindex="0" aria-expanded="false"><div class="health-icon icon-yellow">启</div><div><span class="health-label">系统运行</span><strong id="uptimeHealth">等待读取</strong><small id="uptimeHealthDetail">读取系统运行时间</small></div><span id="uptimeBadge" class="health-badge">等待中</span></article>
             <article class="health-item" data-health-card role="button" tabindex="0" aria-expanded="false"><div class="health-icon icon-blue">空</div><div><span class="health-label">系统盘空间</span><strong id="systemDiskHealth">等待读取</strong><small id="systemDiskDetail">首次检查可能需要几秒</small></div><span id="systemDiskBadge" class="health-badge">等待中</span></article>
           </div>
+          <section class="hardware-overview" aria-labelledby="hardwareOverviewTitle">
+            <div class="hardware-overview-head">
+              <div><p class="eyebrow">硬件规格与健康</p><h3 id="hardwareOverviewTitle">关键部件</h3></div>
+              <span id="hardwareSpecsUpdated" class="hardware-specs-updated">等待采集</span>
+            </div>
+            <div id="hardwareOverview" class="hardware-overview-grid"><p class="empty">正在读取硬件规格...</p></div>
+          </section>
           <div id="hardwareCheckPanel" class="hardware-check-panel"></div>
         </section>
         <article class="panel disk-panel overview-disk-panel">
@@ -206,6 +214,15 @@
 
     <footer><span>数据只在本机读取，不上传到网络。</span><span id="status">连接中</span></footer>
   </main>
-  <script src="/app.js?v=20261007-processes2"></script>
+  <dialog id="ecoModeDialog" class="eco-dialog">
+    <form method="dialog" class="eco-dialog-content">
+      <div class="panel-head"><div><p class="eyebrow">节能与降温</p><h2 id="ecoDialogTitle">启用节能模式？</h2></div><button class="eco-close" value="cancel" aria-label="关闭">×</button></div>
+      <p id="ecoDialogDescription" class="eco-description"></p>
+      <label class="eco-setting"><span><strong>处理高耗能后台进程</strong><small>暂时限制所选程序的 CPU 优先级，不结束进程；退出模式后自动恢复。</small></span><input id="ecoLimitProcesses" type="checkbox" checked></label>
+      <div class="eco-process-list" id="ecoProcessCandidates"></div>
+      <div class="eco-dialog-actions"><button class="button secondary" value="cancel">取消</button><button id="ecoConfirm" class="button primary" value="default">启用节能模式</button></div>
+    </form>
+  </dialog>
+  <script src="/app.js?v=20261007-hardware-eco1"></script>
 </body>
 </html>

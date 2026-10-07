@@ -1,5 +1,5 @@
 ﻿{
-    "checkedAt":  "2026-10-07T04:55:40.9195917Z",
+    "checkedAt":  "2026-10-07T07:46:39.7008310Z",
     "batteryRead":  false,
     "battery":  [
 
@@ -36,92 +36,108 @@
                      "manufacturer":  "LENOVO",
                      "model":  "82AV",
                      "biosVersion":  "EFCN48WW",
-                     "memoryBytes":  0
+                     "memoryBytes":  0,
+                     "gpuName":  "",
+                     "gpuMemoryBytes":  0,
+                     "gpuDriverVersion":  "",
+                     "memorySpeedMHz":  0,
+                     "memoryModuleCount":  0
                  },
+    "hardwareSpecs":  {
+                          "memorySpeedMHz":  0,
+                          "memoryModuleCount":  0,
+                          "memoryModules":  [
+
+                                            ],
+                          "smartRead":  false,
+                          "smartDisks":  [
+
+                                         ]
+                      },
     "processes":  [
                       {
                           "name":  "webstorm64",
                           "pid":  23588,
-                          "cpuTime":  1124.8125,
+                          "cpuTime":  1682.734375,
                           "cpuPercent":  2,
-                          "memory":  1998782464
+                          "memory":  1493667840
                       },
                       {
                           "name":  "Doubao",
                           "pid":  2996,
-                          "cpuTime":  886.75,
-                          "cpuPercent":  1,
-                          "memory":  340684800
-                      },
-                      {
-                          "name":  "ChatGPT",
-                          "pid":  21484,
-                          "cpuTime":  609.703125,
-                          "cpuPercent":  1,
-                          "memory":  517869568
+                          "cpuTime":  1463.46875,
+                          "cpuPercent":  0,
+                          "memory":  355401728
                       },
                       {
                           "name":  "wps",
                           "pid":  14448,
-                          "cpuTime":  607.890625,
+                          "cpuTime":  1226.46875,
                           "cpuPercent":  1,
-                          "memory":  171102208
+                          "memory":  92631040
+                      },
+                      {
+                          "name":  "ChatGPT",
+                          "pid":  21484,
+                          "cpuTime":  1009.640625,
+                          "cpuPercent":  3,
+                          "memory":  603492352
                       },
                       {
                           "name":  "ChatGPT",
                           "pid":  8008,
-                          "cpuTime":  393.28125,
+                          "cpuTime":  486.390625,
                           "cpuPercent":  0,
-                          "memory":  126300160
-                      },
-                      {
-                          "name":  "Doubao",
-                          "pid":  2420,
-                          "cpuTime":  256.375,
-                          "cpuPercent":  1,
-                          "memory":  158748672
+                          "memory":  108990464
                       },
                       {
                           "name":  "LibreHardwareMonitor",
                           "pid":  3588,
-                          "cpuTime":  198.265625,
+                          "cpuTime":  384.765625,
                           "cpuPercent":  0,
-                          "memory":  97538048
+                          "memory":  100007936
+                      },
+                      {
+                          "name":  "Doubao",
+                          "pid":  2420,
+                          "cpuTime":  378.21875,
+                          "cpuPercent":  1,
+                          "memory":  164003840
                       },
                       {
                           "name":  "chrome",
                           "pid":  15116,
-                          "cpuTime":  135.265625,
+                          "cpuTime":  292.34375,
                           "cpuPercent":  0,
-                          "memory":  102121472
+                          "memory":  128126976
                       },
                       {
-                          "name":  "ChatGPT",
-                          "pid":  980,
-                          "cpuTime":  128.65625,
-                          "cpuPercent":  1,
-                          "memory":  331866112
-                      },
-                      {
-                          "name":  "explorer",
-                          "pid":  2856,
-                          "cpuTime":  125.75,
+                          "name":  "chrome",
+                          "pid":  14816,
+                          "cpuTime":  239.921875,
                           "cpuPercent":  0,
-                          "memory":  185999360
+                          "memory":  262508544
                       },
                       {
                           "name":  "Doubao",
                           "pid":  16380,
-                          "cpuTime":  113.28125,
+                          "cpuTime":  218.03125,
                           "cpuPercent":  0,
-                          "memory":  146526208
+                          "memory":  120479744
                       },
                       {
                           "name":  "Doubao",
                           "pid":  7980,
-                          "cpuTime":  110.78125,
+                          "cpuTime":  215.828125,
                           "cpuPercent":  0,
-                          "memory":  149053440
+                          "memory":  147202048
+                      },
+                      {
+                          "name":  "explorer",
+                          "pid":  2856,
+                          "cpuTime":  204.328125,
+                          "cpuPercent":  1,
+                          "memory":  205811712
                       }
                   ]
 }

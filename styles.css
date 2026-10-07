@@ -22,6 +22,9 @@ h2 { font-size: 20px; margin-bottom: 0; letter-spacing: 0; }
 .dot { padding: 0 8px; color: #b7c2ba; }
 .actions { display: flex; gap: 10px; }
 .button { border: 0; border-radius: 7px; cursor: pointer; font: inherit; font-weight: 700; padding: 11px 16px; transition: transform .15s, opacity .15s; }
+.button.is-eco-active { background: #fff1d8; color: #8b651d; }
+.button.is-eco-recommended { background: #eaf4e6; color: #426b43; }
+.eco-dialog { border: 1px solid var(--line); border-radius: 8px; color: var(--ink); max-height: min(80vh,720px); max-width: min(540px,calc(100vw - 28px)); padding: 0; width: 100%; }.eco-dialog::backdrop { background: rgba(23,33,27,.36); }.eco-dialog-content { padding: 22px; }.eco-dialog-content .panel-head { align-items: flex-start; margin-bottom: 12px; }.eco-dialog-content h2 { font-size: 18px; }.eco-close { background: #eef3ee; border: 0; border-radius: 6px; color: var(--ink); cursor: pointer; font-size: 20px; height: 32px; width: 32px; }.eco-description { color: var(--muted); font-size: 12px; line-height: 1.6; }.eco-setting { align-items: center; border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); display: flex; gap: 12px; justify-content: space-between; padding: 13px 0; }.eco-setting strong,.eco-setting small { display: block; }.eco-setting strong { font-size: 12px; }.eco-setting small { color: var(--muted); font-size: 11px; line-height: 1.5; margin-top: 4px; }.eco-setting input,.eco-candidate input { accent-color: #688f61; height: 16px; width: 16px; }.eco-process-list { display: grid; gap: 6px; margin: 10px 0; max-height: 210px; overflow-y: auto; }.eco-candidate { align-items: center; background: #f6f9f6; display: flex; gap: 10px; padding: 9px; }.eco-candidate strong,.eco-candidate small { display: block; }.eco-candidate strong { font-size: 12px; }.eco-candidate small { color: var(--muted); font-size: 10px; margin-top: 3px; }.eco-dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 17px; }
 .button:hover { transform: translateY(-1px); }
 .button.primary { color: #fff; background: var(--ink); }
 .button.secondary { color: var(--ink); background: #e9efea; }
@@ -59,6 +62,7 @@ h2 { font-size: 20px; margin-bottom: 0; letter-spacing: 0; }
 .health-summary { align-items: center; color: var(--muted); display: flex; font-size: 12px; gap: 8px; }.health-summary strong { color: var(--ink); font-size: 13px; }.health-summary span:last-child { border-left: 1px solid var(--line); padding-left: 8px; }.health-summary #healthDot { background: #9bbb5d; border-radius: 50%; height: 9px; width: 9px; }
 .health-refresh { background: #eef3ee; border: 0; border-radius: 6px; color: var(--ink); cursor: pointer; font: inherit; font-size: 11px; padding: 7px 10px; }.health-refresh:hover { background: #e1ebe2; }.health-refresh:disabled { cursor: wait; opacity: .6; }
 .hardware-check-panel { background: #f5f8f5; border: 1px solid var(--line); border-radius: 8px; display: none; gap: 8px; grid-template-columns: repeat(5, 1fr); margin-top: 10px; padding: 12px; }.hardware-check-panel.is-visible { display: grid; }.hardware-row { border-right: 1px solid var(--line); padding: 4px 12px; }.hardware-row:last-child { border-right: 0; }.hardware-row strong, .hardware-row span, .hardware-row small { display: block; }.hardware-row strong { font-size: 11px; color: var(--muted); }.hardware-row span { font-size: 14px; font-weight: 800; margin: 5px 0; }.hardware-row small { color: var(--muted); font-size: 11px; }
+.hardware-overview { background: #fff; border: 1px solid var(--line); border-radius: 8px; margin-top: 12px; padding: 16px; }.hardware-overview-head { align-items: end; display: flex; justify-content: space-between; margin-bottom: 11px; }.hardware-overview-head .eyebrow { margin-bottom: 4px; }.hardware-overview-head h3 { font-size: 15px; margin: 0; }.hardware-specs-updated { color: var(--muted); font-size: 11px; }.hardware-overview-grid { display: grid; gap: 8px; grid-template-columns: repeat(3,minmax(0,1fr)); }.hardware-spec-row { background: #f6f9f6; border-left: 3px solid #89a88b; min-width: 0; padding: 11px 12px; }.hardware-spec-row strong, .hardware-spec-row small { display: block; }.hardware-spec-row strong { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.hardware-spec-row .hardware-spec-value { display: block; font-size: 15px; font-weight: 800; margin: 6px 0 4px; }.hardware-spec-row small { color: var(--muted); font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
 .health-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }.health-item { align-items: center; background: var(--white); border: 1px solid var(--line); border-radius: 8px; display: grid; gap: 12px; grid-template-columns: 38px 1fr auto; min-height: 94px; padding: 15px; }.health-icon { align-items: center; border-radius: 7px; display: flex; font-size: 14px; font-weight: 800; height: 38px; justify-content: center; width: 38px; }.icon-green { background: #e9f2df; color: #68953e; }.icon-blue { background: #e7eefc; color: #4b76ca; }.icon-lime { background: #eef4dc; color: #789847; }.icon-coral { background: #fce8e2; color: #c45a43; }.icon-yellow { background: #fbf1d7; color: #ac842a; }
 .health-label, .health-item small { color: var(--muted); display: block; font-size: 11px; }.health-item strong { display: block; font-size: 15px; margin: 4px 0; }.health-item small { font-size: 11px; line-height: 1.35; max-width: 220px; }.health-badge { background: #edf3ed; border-radius: 999px; color: #6e836f; font-size: 11px; padding: 5px 8px; white-space: nowrap; }.health-badge.warn { background: #fff1d8; color: #a57920; }.health-badge.danger { background: #fbe6e2; color: #b84f3d; }.health-badge.good { background: #e6f2e4; color: #4c8a4f; }
 .temperature-panel { background: var(--white); border: 1px solid var(--line); border-radius: 8px; margin-top: 10px; padding: 23px; }
@@ -175,6 +179,7 @@ footer { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 18px;
 .monitoring-stack { display: grid; gap: 14px; }
 .monitoring-stack .temperature-panel { margin-top: 0; }
 .overview-disk-panel { margin-bottom: 14px; }
+.hardware-overview-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 
 .health-summary #healthDetail { border-left: 1px solid var(--line); padding-left: 8px; }
 .health-item { cursor: pointer; min-height: 76px; padding: 11px 13px; transition: border-color .15s, background .15s, box-shadow .15s; }
@@ -204,6 +209,9 @@ footer { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 18px;
 }
 @media (max-width: 500px) {
   .dashboard-tabs { margin-top: 18px; }
+  .hardware-overview-grid { grid-template-columns: 1fr; }
+  .actions { flex-wrap: wrap; }
+  .eco-dialog-content { padding: 17px; }
   .dashboard-tab { font-size: 12px; padding: 9px 12px; }
   .health-summary { justify-content: flex-start; }
   .temperature-sensor-head { align-items: flex-start; gap: 9px; }
@@ -218,3 +226,4 @@ footer { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 18px;
   .process-table th:nth-child(3), .process-table td:nth-child(3) { width: 33%; }
   .process-kill { opacity: 1; pointer-events: auto; }
 }
+.hardware-spec-row.is-warning { background: #fff5e8; border-left-color: var(--yellow); }.hardware-spec-row.is-warning .hardware-spec-value { color: #966f1f; }.hardware-spec-row.is-unavailable { background: #f3f6f3; border-left-color: #aebbb0; }.hardware-spec-row.is-unavailable .hardware-spec-value { color: var(--muted); }
