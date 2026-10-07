@@ -1,0 +1,9 @@
+﻿PC Observer is running.
+Local: http://127.0.0.1:5173/
+LAN:
+http://192.168.1.5:5173/
+http://192.168.1.6:5173/
+http://192.168.137.1:5173/
+http://100.98.38.6:5173/
+
+If another computer cannot connect, run Allow LAN Access.bat as administrator.

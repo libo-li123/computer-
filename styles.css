@@ -1,0 +1,197 @@
+:root {
+  --ink: #17211b;
+  --muted: #738078;
+  --line: #e2e9e3;
+  --paper: #f7faf7;
+  --white: #ffffff;
+  --coral: #e86f51;
+  --lime: #9bbb5d;
+  --blue: #5b8def;
+  --yellow: #e6b94f;
+}
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+.shell { max-width: 1320px; margin: 0 auto; padding: 38px 42px 30px; }
+.topbar, .panel-head, .metric-head, footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.topbar { align-items: flex-end; margin-bottom: 30px; }
+.eyebrow { color: #87938a; font-size: 11px; font-weight: 800; letter-spacing: .13em; margin: 0 0 7px; }
+h1, h2, p { margin-top: 0; }
+h1 { font-size: clamp(28px, 4vw, 44px); letter-spacing: 0; line-height: 1.05; margin-bottom: 10px; }
+h2 { font-size: 20px; margin-bottom: 0; letter-spacing: 0; }
+.subline, footer { color: var(--muted); font-size: 13px; }
+.dot { padding: 0 8px; color: #b7c2ba; }
+.actions { display: flex; gap: 10px; }
+.button { border: 0; border-radius: 7px; cursor: pointer; font: inherit; font-weight: 700; padding: 11px 16px; transition: transform .15s, opacity .15s; }
+.button:hover { transform: translateY(-1px); }
+.button.primary { color: #fff; background: var(--ink); }
+.button.secondary { color: var(--ink); background: #e9efea; }
+.metric-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(245px, .82fr); gap: 14px; margin-bottom: 14px; }
+.metric-card, .panel { background: var(--white); border: 1px solid var(--line); border-radius: 8px; }
+.metric-card { min-height: 164px; padding: 20px; border-top: 4px solid; }
+.metric-card-main { display: grid; grid-template-columns: minmax(125px, .9fr) minmax(150px, 1.1fr); grid-template-rows: 1fr auto; column-gap: 18px; row-gap: 11px; }
+.metric-main-copy { min-width: 0; }
+.metric-reading { align-items: baseline; display: flex; margin-top: 22px; }
+.metric-card-main .metric-reading strong { margin: 0 3px 0 0; }
+.metric-card-main > .bar { grid-column: 1 / -1; margin: 0; }
+.sparkline-box { align-self: center; min-width: 0; }
+.sparkline { display: block; height: 76px; overflow: visible; width: 100%; }
+.sparkline-line { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 3; }
+.accent-coral .sparkline-line, .accent-coral .sparkline-point { stroke: var(--coral); fill: var(--coral); }
+.accent-lime .sparkline-line, .accent-lime .sparkline-point { stroke: var(--lime); fill: var(--lime); }
+.sparkline-box > span { color: var(--muted); display: block; font-size: 10px; margin-top: 3px; text-align: right; }
+.metric-card-secondary { padding: 20px; }
+.secondary-stat-list { display: grid; gap: 13px; margin-top: 20px; }
+.secondary-stat-label { align-items: center; color: var(--muted); display: flex; font-size: 12px; font-weight: 700; justify-content: space-between; }
+.secondary-stat-icon { color: var(--ink); font-size: 9px; letter-spacing: .08em; opacity: .52; }
+.secondary-stat strong { display: block; font-size: 27px; line-height: 1; margin: 12px 0 7px; }
+.secondary-stat p { color: var(--muted); font-size: 11px; margin: 0; }
+.secondary-stat-disk strong { font-size: 25px; }
+.secondary-divider { border-top: 1px solid var(--line); }
+.accent-coral { border-top-color: var(--coral); }.accent-lime { border-top-color: var(--lime); }.accent-blue { border-top-color: var(--blue); }.accent-yellow { border-top-color: var(--yellow); }
+.metric-head { color: var(--muted); font-size: 13px; font-weight: 700; }
+.metric-icon { color: var(--ink); font-size: 10px; letter-spacing: .1em; opacity: .55; }
+.metric-card strong { display: inline-block; font-size: 38px; line-height: 1; margin: 25px 3px 8px 0; }
+.unit { color: var(--muted); font-size: 14px; font-weight: 700; }
+.metric-card p { color: var(--muted); font-size: 12px; margin: 0; }
+.bar { background: #eef2ee; height: 5px; margin: 0 0 9px; overflow: hidden; }
+.bar i { background: currentColor; display: block; height: 100%; transition: width .5s ease; width: 0; }.accent-coral .bar i { color: var(--coral); }.accent-lime .bar i { color: var(--lime); }
+.health-section { margin-bottom: 14px; }.section-heading { align-items: end; display: flex; justify-content: space-between; margin: 28px 0 13px; }.section-heading h2 { font-size: 22px; }
+.health-summary { align-items: center; color: var(--muted); display: flex; font-size: 12px; gap: 8px; }.health-summary strong { color: var(--ink); font-size: 13px; }.health-summary span:last-child { border-left: 1px solid var(--line); padding-left: 8px; }.health-summary #healthDot { background: #9bbb5d; border-radius: 50%; height: 9px; width: 9px; }
+.health-refresh { background: #eef3ee; border: 0; border-radius: 6px; color: var(--ink); cursor: pointer; font: inherit; font-size: 11px; padding: 7px 10px; }.health-refresh:hover { background: #e1ebe2; }.health-refresh:disabled { cursor: wait; opacity: .6; }
+.hardware-check-panel { background: #f5f8f5; border: 1px solid var(--line); border-radius: 8px; display: none; gap: 8px; grid-template-columns: repeat(5, 1fr); margin-top: 10px; padding: 12px; }.hardware-check-panel.is-visible { display: grid; }.hardware-row { border-right: 1px solid var(--line); padding: 4px 12px; }.hardware-row:last-child { border-right: 0; }.hardware-row strong, .hardware-row span, .hardware-row small { display: block; }.hardware-row strong { font-size: 11px; color: var(--muted); }.hardware-row span { font-size: 14px; font-weight: 800; margin: 5px 0; }.hardware-row small { color: var(--muted); font-size: 11px; }
+.health-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }.health-item { align-items: center; background: var(--white); border: 1px solid var(--line); border-radius: 8px; display: grid; gap: 12px; grid-template-columns: 38px 1fr auto; min-height: 94px; padding: 15px; }.health-icon { align-items: center; border-radius: 7px; display: flex; font-size: 14px; font-weight: 800; height: 38px; justify-content: center; width: 38px; }.icon-green { background: #e9f2df; color: #68953e; }.icon-blue { background: #e7eefc; color: #4b76ca; }.icon-lime { background: #eef4dc; color: #789847; }.icon-coral { background: #fce8e2; color: #c45a43; }.icon-yellow { background: #fbf1d7; color: #ac842a; }
+.health-label, .health-item small { color: var(--muted); display: block; font-size: 11px; }.health-item strong { display: block; font-size: 15px; margin: 4px 0; }.health-item small { font-size: 11px; line-height: 1.35; max-width: 220px; }.health-badge { background: #edf3ed; border-radius: 999px; color: #6e836f; font-size: 11px; padding: 5px 8px; white-space: nowrap; }.health-badge.warn { background: #fff1d8; color: #a57920; }.health-badge.danger { background: #fbe6e2; color: #b84f3d; }.health-badge.good { background: #e6f2e4; color: #4c8a4f; }
+.temperature-panel { background: var(--white); border: 1px solid var(--line); border-radius: 8px; margin-top: 10px; padding: 23px; }
+.temperature-panel-head { margin-bottom: 18px; }
+.temperature-live-state { color: var(--muted); font-size: 12px; }
+.temperature-overview { display: grid; gap: 12px; grid-template-columns: minmax(220px, .9fr) 1.6fr; }
+.temperature-risk-card { background: #eaf4e6; border-left: 4px solid #79ad68; border-radius: 6px; min-height: 142px; padding: 17px 18px; }
+.temperature-risk-card.warn { background: #fff5e2; border-left-color: var(--yellow); }
+.temperature-risk-card.danger { background: #fcebe7; border-left-color: var(--coral); }
+.temperature-risk-card.is-unavailable { background: #f2f5f2; border-left-color: #aebbb0; }
+.temperature-kicker { color: var(--muted); display: block; font-size: 11px; font-weight: 800; letter-spacing: .04em; }
+.temperature-risk-card strong { display: block; font-size: 25px; margin: 13px 0 7px; }
+.temperature-risk-card p { color: #647267; font-size: 12px; line-height: 1.55; margin: 0; }
+.temperature-stats { display: grid; gap: 1px; grid-template-columns: repeat(4, 1fr); }
+.temperature-stats > div { background: #f6f9f6; padding: 15px; }
+.temperature-stats > div:first-child { border-radius: 6px 0 0 6px; }
+.temperature-stats > div:last-child { border-radius: 0 6px 6px 0; }
+.temperature-stats span, .temperature-stats strong { display: block; }
+.temperature-stats span { color: var(--muted); font-size: 11px; }
+.temperature-stats strong { font-size: 16px; margin-top: 10px; overflow-wrap: anywhere; }
+.temperature-guidance { border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); display: grid; gap: 22px; grid-template-columns: 1fr 1fr; margin: 17px 0 14px; padding: 14px 0; }
+.temperature-guidance p { color: #59665c; font-size: 12px; line-height: 1.6; margin: 7px 0 0; }
+.temperature-sensor-head { align-items: center; display: flex; justify-content: space-between; margin-bottom: 9px; }
+.temperature-sensor-head strong { font-size: 13px; }
+.temperature-sensor-head span, .temperature-source-note { color: var(--muted); font-size: 11px; }
+.temperature-sensors { display: grid; gap: 7px; }
+.temperature-sensor-row { align-items: center; background: #f8faf8; border: 1px solid #edf1ed; border-radius: 6px; display: grid; gap: 13px; grid-template-columns: minmax(150px, 1fr) minmax(120px, 1.5fr) minmax(148px, auto); min-height: 60px; padding: 9px 12px; }
+.temperature-sensor-name strong, .temperature-sensor-name small, .temperature-reading strong, .temperature-reading small { display: block; }
+.temperature-sensor-name strong { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.temperature-sensor-name small, .temperature-reading small { color: var(--muted); font-size: 10px; margin-top: 4px; }
+.temperature-bar { background: #e9efea; height: 7px; overflow: hidden; }
+.temperature-bar i { background: #79ad68; display: block; height: 100%; transition: width .5s ease; }
+.temperature-bar i.warn { background: var(--yellow); }
+.temperature-bar i.danger { background: var(--coral); }
+.temperature-reading { align-items: center; column-gap: 7px; display: grid; grid-template-columns: auto auto; justify-content: end; }
+.temperature-reading strong { font-size: 14px; }
+.temperature-reading small { grid-column: 1 / -1; text-align: right; }
+.temperature-tag { background: #e6f2e4; border-radius: 999px; color: #4c8a4f; font-size: 10px; padding: 4px 6px; white-space: nowrap; }
+.temperature-tag.warn { background: #fff1d8; color: #a57920; }
+.temperature-tag.danger { background: #fbe6e2; color: #b84f3d; }
+.temperature-source-note { line-height: 1.5; margin: 12px 0 0; }
+.report-panel { margin-bottom: 14px; }
+.report-panel-head { align-items: center; margin-bottom: 15px; }
+.report-meta { color: var(--muted); font-size: 11px; margin: 7px 0 0; }
+.report-score { align-items: center; background: #eaf4e6; border-radius: 8px; display: flex; flex-direction: column; min-width: 88px; padding: 10px 13px; }
+.report-score strong { color: #4c8a4f; font-size: 26px; line-height: 1; }
+.report-score span { color: #5f7563; font-size: 10px; margin-top: 5px; white-space: nowrap; }
+.report-score.warn { background: #fff5df; }.report-score.warn strong { color: #a57920; }.report-score.warn span { color: #8d712f; }
+.report-score.danger { background: #fcebe7; }.report-score.danger strong { color: #b84f3d; }.report-score.danger span { color: #9f5a4d; }
+.report-score.info { background: #eaf0fc; }.report-score.info strong { color: #4b76ca; }.report-score.info span { color: #5874a9; }
+.report-summary { background: #f5f8f5; border-left: 4px solid #79ad68; color: #526257; font-size: 13px; line-height: 1.6; margin-bottom: 16px; padding: 12px 14px; }
+.report-grid { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+.report-column { min-width: 0; }
+.report-column-head { align-items: center; display: flex; justify-content: space-between; margin-bottom: 9px; }
+.report-column-head h3 { font-size: 14px; margin: 0; }
+.report-count, .report-tag { background: #eef3ee; border-radius: 999px; color: var(--muted); font-size: 10px; padding: 4px 7px; white-space: nowrap; }
+.report-list { display: grid; gap: 7px; }
+.report-item { align-items: flex-start; background: #fafcf9; border: 1px solid #edf1ed; border-left: 3px solid #9bbb5d; border-radius: 6px; display: grid; gap: 9px; grid-template-columns: 22px 1fr auto; min-height: 64px; padding: 10px; }
+.report-item.warn { background: #fffaf0; border-left-color: var(--yellow); }
+.report-item.danger { background: #fff7f4; border-left-color: var(--coral); }
+.report-item.info { background: #f6f8fc; border-left-color: var(--blue); }
+.report-item.suggestion { background: #f8faf8; border-left-color: #8ba894; grid-template-columns: 22px 1fr; }
+.report-item-mark { align-items: center; background: #e6f2e4; border-radius: 50%; color: #4c8a4f; display: flex; font-size: 11px; font-weight: 800; height: 21px; justify-content: center; width: 21px; }
+.report-item.warn .report-item-mark { background: #fff0cf; color: #a57920; }
+.report-item.danger .report-item-mark { background: #fbe6e2; color: #b84f3d; }
+.report-item.info .report-item-mark { background: #e7eefc; color: #4b76ca; }
+.report-item strong { font-size: 12px; line-height: 1.35; }
+.report-item p { color: #66736a; font-size: 11px; line-height: 1.5; margin: 4px 0 0; }
+.report-item .report-tag { align-self: start; }
+.report-evidence { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 12px; }
+.report-evidence p { color: var(--muted); font-size: 11px; line-height: 1.5; margin: 6px 0 0; }
+[hidden] { display: none !important; }
+.content-grid { display: grid; grid-template-columns: 1.7fr 1fr; gap: 14px; margin-bottom: 14px; }
+.panel { padding: 23px; }
+.panel-head { align-items: flex-start; margin-bottom: 22px; }
+.live { color: var(--muted); font-size: 12px; white-space: nowrap; }.live i { background: #6ebc70; border-radius: 50%; display: inline-block; height: 7px; margin-right: 6px; width: 7px; }
+.chart-wrap { height: 262px; position: relative; }.trend-chart { height: 100%; overflow: visible; width: 100%; }.trend-line { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 3; }.cpu-line { stroke: var(--coral); }.memory-line { stroke: var(--blue); }.cpu-point { fill: var(--coral); }.memory-point { fill: var(--blue); }
+.chart-summary { background: rgba(255,255,255,.88); bottom: 8px; color: var(--muted); font-size: 12px; left: 38px; padding: 4px 8px; position: absolute; }
+.legend { color: var(--muted); display: flex; font-size: 12px; gap: 18px; margin-top: 6px; }.legend i { border-radius: 50%; display: inline-block; height: 8px; margin-right: 5px; width: 8px; }.legend-cpu { background: var(--coral); }.legend-memory { background: var(--blue); }
+.disk-list { display: grid; gap: 17px; }.disk-row { font-size: 13px; }.disk-label { display: flex; justify-content: space-between; margin-bottom: 7px; }.disk-label span:last-child { color: var(--muted); font-size: 12px; }.disk-bar { background: #edf1ed; height: 8px; }.disk-bar i { background: var(--blue); display: block; height: 100%; }
+.process-panel { padding-bottom: 14px; }.count { background: #eef3ee; border-radius: 999px; color: var(--muted); font-size: 12px; padding: 6px 10px; }
+.table-wrap { overflow-x: auto; } table { border-collapse: collapse; min-width: 650px; width: 100%; } th, td { border-bottom: 1px solid #edf1ed; padding: 12px 8px; text-align: left; } th { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; } td { font-size: 13px; } td:not(:first-child) { color: var(--muted); }.process-name { color: var(--ink); font-weight: 700; }
+.empty { color: var(--muted); font-size: 13px; padding: 20px 0; }.process-panel .empty { text-align: center; }
+footer { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 18px; }
+@media (max-width: 900px) { .shell { padding: 25px 18px; }.topbar { align-items: flex-start; flex-direction: column; }.metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.metric-card-secondary { grid-column: 1 / -1; }.secondary-stat-list { grid-template-columns: 1fr 1px 1fr; align-items: center; }.secondary-divider { border-left: 1px solid var(--line); border-top: 0; height: 72px; }.health-grid { grid-template-columns: repeat(2, 1fr); }.content-grid { grid-template-columns: 1fr; }.report-grid { grid-template-columns: 1fr; }.temperature-overview { grid-template-columns: 1fr; }.temperature-sensor-row { grid-template-columns: minmax(150px, 1fr) minmax(120px, 1fr) minmax(148px, auto); } }
+@media (max-width: 500px) { .metric-grid { grid-template-columns: 1fr; }.metric-card-main { grid-template-columns: 1fr; row-gap: 12px; }.metric-card-main > .bar { grid-column: 1; }.sparkline-box { margin-top: 2px; }.secondary-stat-list { grid-template-columns: 1fr; }.secondary-divider { border-left: 0; border-top: 1px solid var(--line); height: auto; }.panel, .temperature-panel { padding: 17px; }.chart-wrap { height: 210px; }.temperature-panel-head { align-items: flex-start; flex-direction: column; gap: 8px; }.report-panel-head { align-items: flex-start; }.report-score { align-self: stretch; min-width: 74px; }.temperature-stats { grid-template-columns: repeat(2, 1fr); }.temperature-stats > div:first-child { border-radius: 6px 0 0 0; }.temperature-stats > div:last-child { border-radius: 0 0 6px 0; }.temperature-guidance { grid-template-columns: 1fr; gap: 12px; }.temperature-sensor-row { align-items: stretch; grid-template-columns: 1fr auto; }.temperature-bar { grid-column: 1 / -1; grid-row: 2; }.temperature-reading { grid-column: 2; grid-row: 1; }.temperature-sensor-name { min-width: 0; } footer { align-items: flex-start; flex-direction: column; gap: 8px; } }
+
+/* Compact health cards and tabbed detail areas. */
+.dashboard-tabs { align-items: center; border-bottom: 1px solid var(--line); display: flex; gap: 6px; margin: 22px 0 14px; overflow-x: auto; padding-bottom: 6px; }
+.dashboard-tab { background: transparent; border: 1px solid transparent; border-radius: 7px; color: var(--muted); cursor: pointer; flex: 0 0 auto; font: inherit; font-size: 13px; font-weight: 700; padding: 10px 15px; }
+.dashboard-tab:hover { background: #eef3ee; color: var(--ink); }
+.dashboard-tab.is-active { background: var(--ink); color: #fff; }
+.dashboard-tab-panels { min-width: 0; }
+.tab-panel[hidden] { display: none; }
+.tab-panel.is-active { min-width: 0; }
+.monitoring-stack { display: grid; gap: 14px; }
+.monitoring-stack .temperature-panel { margin-top: 0; }
+.overview-disk-panel { margin-bottom: 14px; }
+
+.health-summary #healthDetail { border-left: 1px solid var(--line); padding-left: 8px; }
+.health-item { cursor: pointer; min-height: 76px; padding: 11px 13px; transition: border-color .15s, background .15s, box-shadow .15s; }
+.health-item:hover { background: #fbfdfb; border-color: #cbd9ce; }
+.health-item:focus-visible { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(91,141,239,.15); outline: 0; }
+.health-item:not(.is-expanded) small { display: none; }
+.health-item.is-expanded { align-items: start; min-height: 92px; }
+.health-item.is-expanded small { display: block; }
+
+.temperature-sensor-title, .temperature-sensor-controls { align-items: center; display: flex; gap: 9px; }
+.temperature-sensor-title span, .temperature-sensor-controls > span { color: var(--muted); font-size: 11px; }
+.temperature-sensor-controls .health-refresh { padding: 6px 9px; }
+.temperature-sensor-row { background: #f8faf8; border: 1px solid #edf1ed; border-radius: 6px; display: block; min-height: 0; overflow: hidden; padding: 0; }
+.temperature-sensor-summary { align-items: center; cursor: pointer; display: grid; gap: 13px; grid-template-columns: minmax(150px, 1fr) minmax(120px, 1.5fr) minmax(148px, auto); list-style: none; min-height: 60px; padding: 9px 34px 9px 12px; position: relative; }
+.temperature-sensor-summary::-webkit-details-marker { display: none; }
+.temperature-sensor-summary::after { color: var(--muted); content: "+"; font-size: 16px; line-height: 1; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }
+.temperature-sensor-row[open] .temperature-sensor-summary { background: #fbfdfb; border-bottom: 1px solid #edf1ed; }
+.temperature-sensor-row[open] .temperature-sensor-summary::after { content: "−"; }
+.temperature-sensor-name, .temperature-reading { min-width: 0; }
+.temperature-sensor-detail { align-items: center; background: #fbfdfb; display: grid; gap: 6px 10px; grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr); padding: 10px 12px; }
+.temperature-sensor-detail span { color: var(--muted); font-size: 10px; }
+.temperature-sensor-detail strong { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 900px) {
+  .health-summary { flex-wrap: wrap; justify-content: flex-end; }
+  .temperature-sensor-summary { grid-template-columns: minmax(150px, 1fr) minmax(120px, 1fr) minmax(148px, auto); }
+}
+@media (max-width: 500px) {
+  .dashboard-tabs { margin-top: 18px; }
+  .dashboard-tab { font-size: 12px; padding: 9px 12px; }
+  .health-summary { justify-content: flex-start; }
+  .temperature-sensor-head { align-items: flex-start; gap: 9px; }
+  .temperature-sensor-title, .temperature-sensor-controls { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .temperature-sensor-summary { grid-template-columns: 1fr auto; }
+  .temperature-sensor-summary .temperature-bar { grid-column: 1 / -1; grid-row: 2; }
+  .temperature-sensor-summary .temperature-reading { grid-column: 2; grid-row: 1; }
+  .temperature-sensor-detail { grid-template-columns: auto minmax(0, 1fr); }
+}

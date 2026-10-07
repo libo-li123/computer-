@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>电脑使用观察器</title>
+  <link rel="stylesheet" href="/styles.css?v=20261007-tabs2">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">PC HEALTH PLATFORM</p>
+        <h1>电脑健康检测平台</h1>
+        <p class="subline"><span id="host">正在读取设备</span><span class="dot">·</span><span id="updated">等待数据</span></p>
+      </div>
+      <div class="actions">
+        <button id="pause" class="button secondary" title="暂停或继续自动刷新">暂停</button>
+        <button id="analysisReportToggle" class="button secondary" aria-expanded="false" title="查看电脑健康分析报告">分析报告</button>
+        <button id="export" class="button primary" title="导出当前系统快照">导出快照</button>
+      </div>
+    </header>
+
+    <section class="metric-grid">
+      <article class="metric-card metric-card-main accent-coral">
+        <div class="metric-main-copy">
+          <div class="metric-head"><span>处理器</span><span class="metric-icon">CPU</span></div>
+          <div class="metric-reading"><strong id="cpuValue">--</strong><span class="unit">%</span></div>
+          <p id="cpuMeta">正在测量负载</p>
+        </div>
+        <div class="sparkline-box">
+          <svg id="cpuSparkline" class="sparkline" viewBox="0 0 240 76" role="img" aria-label="处理器最近实时使用率">
+            <polyline id="cpuSparklineLine" class="sparkline-line" points=""></polyline>
+            <circle id="cpuSparklinePoint" class="sparkline-point" r="4" cx="0" cy="0"></circle>
+          </svg>
+          <span>最近实时波动</span>
+        </div>
+        <div class="bar"><i id="cpuBar"></i></div>
+      </article>
+      <article class="metric-card metric-card-main accent-lime">
+        <div class="metric-main-copy">
+          <div class="metric-head"><span>内存</span><span class="metric-icon">RAM</span></div>
+          <div class="metric-reading"><strong id="memoryValue">--</strong><span class="unit">%</span></div>
+          <p id="memoryMeta">正在读取内存</p>
+        </div>
+        <div class="sparkline-box">
+          <svg id="memorySparkline" class="sparkline" viewBox="0 0 240 76" role="img" aria-label="内存最近实时使用率">
+            <polyline id="memorySparklineLine" class="sparkline-line" points=""></polyline>
+            <circle id="memorySparklinePoint" class="sparkline-point" r="4" cx="0" cy="0"></circle>
+          </svg>
+          <span>最近实时波动</span>
+        </div>
+        <div class="bar"><i id="memoryBar"></i></div>
+      </article>
+      <article class="metric-card metric-card-secondary accent-blue">
+        <div class="metric-head"><span>系统概览</span><span class="metric-icon">STATUS</span></div>
+        <div class="secondary-stat-list">
+          <div class="secondary-stat">
+            <div class="secondary-stat-label"><span>运行时间</span><span class="secondary-stat-icon">UP</span></div>
+            <strong id="uptimeValue">--</strong>
+            <p id="uptimeMeta">系统持续运行时间</p>
+          </div>
+          <div class="secondary-divider"></div>
+          <div class="secondary-stat secondary-stat-disk">
+            <div class="secondary-stat-label"><span>系统盘剩余</span><span class="secondary-stat-icon">DISK</span></div>
+            <strong id="diskValue">--</strong>
+            <p id="diskMeta">本地磁盘可用空间</p>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <nav class="dashboard-tabs" role="tablist" aria-label="电脑健康检测模块">
+      <button class="dashboard-tab is-active" id="tabButtonOverview" type="button" role="tab" aria-selected="true" aria-controls="tab-overview" data-tab="tab-overview">总览大盘</button>
+      <button class="dashboard-tab" id="tabButtonMonitoring" type="button" role="tab" aria-selected="false" aria-controls="tab-monitoring" data-tab="tab-monitoring">硬件与温度监控</button>
+      <button class="dashboard-tab" id="tabButtonProcesses" type="button" role="tab" aria-selected="false" aria-controls="tab-processes" data-tab="tab-processes">进程管理</button>
+    </nav>
+
+    <div class="dashboard-tab-panels">
+      <section id="tab-overview" class="tab-panel is-active" role="tabpanel" aria-labelledby="tabButtonOverview">
+        <section class="health-section">
+          <div class="section-heading">
+            <div><p class="eyebrow">设备体检</p><h2>电脑健康状态</h2></div>
+            <div class="health-summary"><span id="healthDot"></span><strong id="healthSummary">读取中</strong><span id="healthDetail">首次检查可能需要几秒</span><button id="healthRefresh" class="health-refresh" title="重新检测电脑健康状态">重新检测</button><button id="hardwareCheck" class="health-refresh" title="检测硬件数据来源">硬件检测</button></div>
+          </div>
+          <div class="health-grid">
+            <article class="health-item" data-health-card role="button" tabindex="0" aria-expanded="false"><div class="health-icon icon-green">温</div><div><span class="health-label">硬件温度</span><strong id="temperatureHealth">等待读取</strong><small id="temperatureDetail">首次检查可能需要几秒</small></div><span id="temperatureBadge" class="health-badge">等待中</span></article>
+            <article class="health-item" data-health-card role="button" tabindex="0" aria-expanded="false"><div class="health-icon icon-blue">盘</div><div><span class="health-label">磁盘健康</span><strong id="diskHealth">等待读取</strong><small id="diskHealthDetail">首次检查可能需要几秒</small></div><span id="diskHealthBadge" class="health-badge">等待中</span></article>
+            <article class="health-item" data-health-card role="button" tabindex="0" aria-expanded="false"><div class="health-icon icon-lime">电</div><div><span class="health-label">电池状态</span><strong id="batteryHealth">等待读取</strong><small id="batteryDetail">首次检查可能需要几秒</small></div><span id="batteryBadge" class="health-badge">等待中</span></article>
+            <article class="health-item" data-health-card role="button" tabindex="0" aria-expanded="false"><div class="health-icon icon-coral">盾</div><div><span class="health-label">安全防护</span><strong id="securityHealth">等待读取</strong><small id="securityDetail">首次检查可能需要几秒</small></div><span id="securityBadge" class="health-badge">等待中</span></article>
+            <article class="health-item" data-health-card role="button" tabindex="0" aria-expanded="false"><div class="health-icon icon-yellow">启</div><div><span class="health-label">系统运行</span><strong id="uptimeHealth">等待读取</strong><small id="uptimeHealthDetail">读取系统运行时间</small></div><span id="uptimeBadge" class="health-badge">等待中</span></article>
+            <article class="health-item" data-health-card role="button" tabindex="0" aria-expanded="false"><div class="health-icon icon-blue">空</div><div><span class="health-label">系统盘空间</span><strong id="systemDiskHealth">等待读取</strong><small id="systemDiskDetail">首次检查可能需要几秒</small></div><span id="systemDiskBadge" class="health-badge">等待中</span></article>
+          </div>
+          <div id="hardwareCheckPanel" class="hardware-check-panel"></div>
+        </section>
+        <article class="panel disk-panel overview-disk-panel">
+          <div class="panel-head"><div><p class="eyebrow">存储概览</p><h2>磁盘空间</h2></div></div>
+          <div id="disks" class="disk-list"><p class="empty">正在读取磁盘...</p></div>
+        </article>
+      </section>
+
+      <section id="tab-monitoring" class="tab-panel" role="tabpanel" aria-labelledby="tabButtonMonitoring" hidden>
+        <div class="monitoring-stack">
+          <article class="panel trend-panel">
+            <div class="panel-head">
+              <div><p class="eyebrow">实时趋势</p><h2>资源使用情况</h2></div>
+              <span class="live"><i></i>资源每 3 秒更新</span>
+            </div>
+            <div class="chart-wrap">
+              <svg id="chart" class="trend-chart" viewBox="0 0 900 300" role="img" aria-label="处理器和内存实时使用趋势">
+                <g id="chartGrid"></g>
+                <polyline id="cpuLine" class="trend-line cpu-line" points=""></polyline>
+                <polyline id="memoryLine" class="trend-line memory-line" points=""></polyline>
+                <circle id="cpuPoint" class="trend-point cpu-point" r="5" cx="0" cy="0"></circle>
+                <circle id="memoryPoint" class="trend-point memory-point" r="5" cx="0" cy="0"></circle>
+              </svg>
+              <div id="chartSummary" class="chart-summary">正在读取实时数据...</div>
+            </div>
+            <div class="legend"><span><i class="legend-cpu"></i>处理器</span><span><i class="legend-memory"></i>内存</span></div>
+          </article>
+
+          <article class="temperature-panel">
+            <div class="panel-head temperature-panel-head">
+              <div><p class="eyebrow">温度分析</p><h2>硬件温度与过热影响</h2></div>
+              <span id="temperatureLiveState" class="temperature-live-state">等待读取</span>
+            </div>
+            <div class="temperature-overview">
+              <div id="temperatureRiskCard" class="temperature-risk-card">
+                <span class="temperature-kicker">当前风险评估</span>
+                <strong id="temperatureRiskTitle">等待读取</strong>
+                <p id="temperatureRiskDescription">正在读取 CPU、GPU 和存储设备温度。</p>
+              </div>
+              <div class="temperature-stats">
+                <div><span>当前最高</span><strong id="temperatureHighest">--</strong></div>
+                <div><span>平均温度</span><strong id="temperatureAverage">--</strong></div>
+                <div><span>传感器数量</span><strong id="temperatureSensorCount">--</strong></div>
+                <div><span>数据来源</span><strong id="temperatureSource">--</strong></div>
+              </div>
+            </div>
+            <div class="temperature-guidance">
+              <div><span class="temperature-kicker">可能影响</span><p id="temperatureImpact">读取温度后显示对性能、噪声和稳定性的影响。</p></div>
+              <div><span class="temperature-kicker">建议处理</span><p id="temperatureAction">读取温度后显示对应建议。</p></div>
+            </div>
+            <div class="temperature-sensor-head">
+              <div class="temperature-sensor-title"><strong>实时传感器</strong><span id="temperatureSensorFilter">默认只显示需关注项</span></div>
+              <div class="temperature-sensor-controls"><span id="temperatureCheckedAt">--</span><button id="temperatureSensorToggle" class="health-refresh" type="button">显示全部</button></div>
+            </div>
+            <div id="temperatureSensors" class="temperature-sensors"><p class="empty">正在读取温度传感器...</p></div>
+            <p id="temperatureSourceNote" class="temperature-source-note">温度数据只展示实际传感器读数，不会把警告阈值当作当前温度。</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="tab-processes" class="tab-panel" role="tabpanel" aria-labelledby="tabButtonProcesses" hidden>
+        <section class="panel process-panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">活动进程</p><h2>当前占用较高的程序</h2></div>
+            <span id="processCount" class="count">--</span>
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr><th>程序</th><th>进程 ID</th><th>累计 CPU 时间</th><th>内存占用</th></tr></thead>
+            <tbody id="processes"><tr><td colspan="4" class="empty">正在读取进程...</td></tr></tbody></table>
+          </div>
+        </section>
+      </section>
+    </div>
+
+    <article id="analysisReportPanel" class="panel report-panel" hidden>
+      <div class="panel-head report-panel-head">
+        <div>
+          <p class="eyebrow">数据分析</p>
+          <h2>电脑健康分析报告</h2>
+          <p id="reportGenerated" class="report-meta">等待实时数据</p>
+        </div>
+        <div class="report-score">
+          <strong id="reportScore">--</strong>
+          <span id="reportScoreLabel">等待分析</span>
+        </div>
+      </div>
+      <div id="reportSummary" class="report-summary">读取数据后生成电脑当前状态分析。</div>
+      <div class="report-grid">
+        <section class="report-column">
+          <div class="report-column-head">
+            <h3>重点关注</h3>
+            <span id="reportAttentionCount" class="report-count">--</span>
+          </div>
+          <div id="reportFindings" class="report-list">
+            <p class="empty">正在读取分析数据...</p>
+          </div>
+        </section>
+        <section class="report-column">
+          <div class="report-column-head">
+            <h3>修改与处理建议</h3>
+            <span id="reportSuggestionCount" class="report-count">--</span>
+          </div>
+          <div id="reportSuggestions" class="report-list">
+            <p class="empty">正在生成建议...</p>
+          </div>
+        </section>
+      </div>
+      <div class="report-evidence">
+        <span class="temperature-kicker">数据依据</span>
+        <p id="reportEvidence">报告会根据 CPU、内存、温度、磁盘、电池、安全防护和系统运行时间实时更新。</p>
+      </div>
+    </article>
+
+    <footer><span>数据只在本机读取，不上传到网络。</span><span id="status">连接中</span></footer>
+  </main>
+  <script src="/app.js?v=20261007-tabs2"></script>
+</body>
+</html>

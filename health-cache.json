@@ -1,0 +1,111 @@
+﻿{
+    "checkedAt":  "2026-10-07T03:00:08.4324804Z",
+    "batteryRead":  true,
+    "battery":  [
+                    {
+                        "charge":  100,
+                        "status":  2
+                    }
+                ],
+    "physicalDisksRead":  true,
+    "physicalDisks":  [
+                          {
+                              "name":  "SKHynix_HFS512GD9TNI-L2A0B",
+                              "health":  "Healthy",
+                              "status":  [
+                                             "OK"
+                                         ],
+                              "mediaType":  "SSD",
+                              "busType":  "NVMe",
+                              "size":  512110190592
+                          }
+                      ],
+    "securityRead":  true,
+    "antivirus":  [
+                      {
+                          "name":  "Windows Defender",
+                          "state":  397568
+                      }
+                  ],
+    "hardwareRead":  true,
+    "hardware":  {
+                     "manufacturer":  "LENOVO",
+                     "model":  "82AV",
+                     "biosVersion":  "EFCN48WW",
+                     "memoryBytes":  0
+                 },
+    "processes":  [
+                      {
+                          "name":  "Doubao",
+                          "pid":  2996,
+                          "cpuTime":  321.96875,
+                          "memory":  342786048
+                      },
+                      {
+                          "name":  "ChatGPT",
+                          "pid":  21484,
+                          "cpuTime":  163.46875,
+                          "memory":  595243008
+                      },
+                      {
+                          "name":  "powershell",
+                          "pid":  3860,
+                          "cpuTime":  151.15625,
+                          "memory":  129597440
+                      },
+                      {
+                          "name":  "webstorm64",
+                          "pid":  23588,
+                          "cpuTime":  150.78125,
+                          "memory":  2570641408
+                      },
+                      {
+                          "name":  "wps",
+                          "pid":  14448,
+                          "cpuTime":  140.359375,
+                          "memory":  194535424
+                      },
+                      {
+                          "name":  "Doubao",
+                          "pid":  2420,
+                          "cpuTime":  105.421875,
+                          "memory":  158187520
+                      },
+                      {
+                          "name":  "chrome",
+                          "pid":  15116,
+                          "cpuTime":  97.859375,
+                          "memory":  123924480
+                      },
+                      {
+                          "name":  "ChatGPT",
+                          "pid":  8008,
+                          "cpuTime":  88,
+                          "memory":  145330176
+                      },
+                      {
+                          "name":  "explorer",
+                          "pid":  2856,
+                          "cpuTime":  82.203125,
+                          "memory":  196227072
+                      },
+                      {
+                          "name":  "LibreHardwareMonitor",
+                          "pid":  3588,
+                          "cpuTime":  74.453125,
+                          "memory":  96837632
+                      },
+                      {
+                          "name":  "chrome",
+                          "pid":  14816,
+                          "cpuTime":  69.140625,
+                          "memory":  253747200
+                      },
+                      {
+                          "name":  "ChatGPT",
+                          "pid":  980,
+                          "cpuTime":  59.53125,
+                          "memory":  430911488
+                      }
+                  ]
+}
