@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>电脑使用观察器</title>
-  <link rel="stylesheet" href="/styles.css?v=20261007-hardware-eco1">
+  <link rel="stylesheet" href="/styles.css?v=20261008-report1">
 </head>
 <body>
   <main class="shell">
@@ -14,11 +14,11 @@
         <h1>电脑健康检测平台</h1>
         <p class="subline"><span id="host">正在读取设备</span><span class="dot">·</span><span id="updated">等待数据</span></p>
       </div>
-      <div class="actions">
+        <div class="actions">
         <button id="pause" class="button secondary" title="暂停或继续自动刷新">暂停</button>
-        <button id="analysisReportToggle" class="button secondary" aria-expanded="false" title="查看电脑健康分析报告">分析报告</button>
+        <button id="analysisReportToggle" class="button secondary" aria-expanded="false" title="查看电脑健康分析报告，并导出 Markdown 或 HTML 报告">分析报告</button>
         <button id="ecoModeToggle" class="button secondary eco-toggle" aria-pressed="false" title="仅限制你明确选择的程序，随时可恢复">节能模式</button>
-        <button id="export" class="button primary" title="导出当前系统快照">导出快照</button>
+        <button id="export" class="button primary" title="一键导出结构化的 Markdown 诊断报告；HTML 网页快照与 JSON 可在分析报告中导出">导出快照</button>
       </div>
     </header>
 
@@ -69,6 +69,12 @@
           </div>
         </div>
       </article>
+      <article class="metric-card metric-card-network accent-yellow">
+        <div class="metric-head"><span>网络实时监控</span><span class="metric-icon">NET</span></div>
+        <div class="network-mini-readings"><div><span>↓</span><strong id="networkMiniDownload">--</strong></div><div><span>↑</span><strong id="networkMiniUpload">--</strong></div></div>
+        <svg id="networkMiniChart" class="network-mini-chart" viewBox="0 0 240 58" role="img" aria-label="网络上下行最近实时速率"><polyline id="networkMiniDownLine" points=""></polyline><polyline id="networkMiniUpLine" points=""></polyline></svg>
+        <p id="networkMiniMeta">等待采样</p>
+      </article>
     </section>
 
     <nav class="dashboard-tabs" role="tablist" aria-label="电脑健康检测模块">
@@ -101,6 +107,86 @@
           </section>
           <div id="hardwareCheckPanel" class="hardware-check-panel"></div>
         </section>
+        <article class="panel network-panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">网络与带宽</p><h2>实时网速</h2></div>
+            <span id="networkLiveState" class="live"><i></i>等待采样</span>
+          </div>
+          <div class="network-body">
+            <div class="network-readings">
+              <div class="network-reading network-reading-download">
+                <span class="network-kicker">下载</span>
+                <strong id="networkDownload">--</strong>
+                <small id="networkDownloadMeta">等待采样</small>
+              </div>
+              <div class="network-reading network-reading-upload">
+                <span class="network-kicker">上传</span>
+                <strong id="networkUpload">--</strong>
+                <small id="networkUploadMeta">等待采样</small>
+              </div>
+            </div>
+            <div class="network-chart-wrap">
+              <svg id="networkChart" class="network-chart" viewBox="0 0 900 220" role="img" aria-label="最近下载与上传速率趋势">
+                <g id="networkChartGrid"></g>
+                <polygon id="networkDownArea" class="network-area network-down-area" points=""></polygon>
+                <polygon id="networkUpArea" class="network-area network-up-area" points=""></polygon>
+                <polyline id="networkDownLine" class="trend-line network-line network-down-line" points=""></polyline>
+                <polyline id="networkUpLine" class="trend-line network-line network-up-line" points=""></polyline>
+                <circle id="networkDownPoint" class="network-point network-down-point" r="4" cx="0" cy="0"></circle>
+                <circle id="networkUpPoint" class="network-point network-up-point" r="4" cx="0" cy="0"></circle>
+              </svg>
+              <div class="network-chart-foot">
+                <div class="legend"><span><i class="legend-network-down"></i>下载</span><span><i class="legend-network-up"></i>上传</span></div>
+                <span id="networkChartSummary" class="network-chart-summary">等待网络采样...</span>
+              </div>
+            </div>
+          </div>
+          <div id="networkAdapters" class="network-adapters"><p class="empty">正在读取网卡速率...</p></div>
+          <p id="networkSourceNote" class="temperature-source-note">正在读取网络速率，速率与连接只在本机统计。</p>
+        </article>
+        
+            <div><p class="eyebrow">历史趋势与异常峰值</p><h2>峰值回溯</h2></div>
+            <div class="history-window-toggle" role="group" aria-label="统计时间范围">
+              <button type="button" class="history-window is-active" data-history-window="session" aria-pressed="true">本次开机</button>
+              <button type="button" class="history-window" data-history-window="day" aria-pressed="false">最近 24 小时</button>
+            </div>
+          </div>
+          <div class="history-body">
+            <div class="history-peaks">
+              <div id="historyPeakCpu" class="history-peak is-empty">
+                <span class="history-peak-label">CPU 峰值</span>
+                <strong id="historyCpuValue">--</strong>
+                <small id="historyCpuMeta">等待采样</small>
+              </div>
+              <div id="historyPeakMemory" class="history-peak is-empty">
+                <span class="history-peak-label">内存峰值</span>
+                <strong id="historyMemoryValue">--</strong>
+                <small id="historyMemoryMeta">等待采样</small>
+              </div>
+              <div id="historyPeakTemperature" class="history-peak is-empty">
+                <span class="history-peak-label">温度峰值</span>
+                <strong id="historyTemperatureValue">--</strong>
+                <small id="historyTemperatureMeta">等待采样</small>
+              </div>
+            </div>
+            <div class="history-chart-wrap">
+              <svg id="historyChart" class="history-chart" viewBox="0 0 900 200" role="img" aria-label="最近一小时的 CPU 与内存峰值曲线">
+                <g id="historyChartGrid"></g>
+                <polyline id="historyCpuLine" class="trend-line history-cpu-line" points=""></polyline>
+                <polyline id="historyMemoryLine" class="trend-line history-memory-line" points=""></polyline>
+                <circle id="historyCpuPoint" class="history-cpu-point" r="4" cx="0" cy="0"></circle>
+                <circle id="historyMemoryPoint" class="history-memory-point" r="4" cx="0" cy="0"></circle>
+              </svg>
+              <div class="history-chart-foot">
+                <div class="legend"><span><i class="legend-history-cpu"></i>CPU</span><span><i class="legend-history-memory"></i>内存</span></div>
+                <span id="historySampleNote" class="network-chart-summary">--</span>
+              </div>
+            </div>
+          </div>
+          <div class="history-events-head"><strong>异常峰值事件</strong><span id="historyEventCount" class="count">--</span></div>
+          <div id="historyEvents" class="history-events"><p class="empty">正在读取历史记录...</p></div>
+          <p id="historySourceNote" class="temperature-source-note">正在读取历史趋势，数据只保存在本机。</p>
+        </article>
         <article class="panel disk-panel overview-disk-panel">
           <div class="panel-head"><div><p class="eyebrow">存储概览</p><h2>磁盘空间</h2></div></div>
           <div id="disks" class="disk-list"><p class="empty">正在读取磁盘...</p></div>
@@ -156,18 +242,50 @@
             <div id="temperatureSensors" class="temperature-sensors"><p class="empty">正在读取温度传感器...</p></div>
             <p id="temperatureSourceNote" class="temperature-source-note">温度数据只展示实际传感器读数，不会把警告阈值当作当前温度。</p>
           </article>
+          <article class="panel history-panel monitoring-history-panel">
+            <button id="historyToggle" class="history-collapse-toggle" type="button" aria-expanded="false"><span><span class="eyebrow">历史趋势与异常峰值</span><strong>峰值回溯</strong></span><span class="collapse-chevron">展开</span></button>
+            <div id="historyCollapseBody" class="history-collapse-body" hidden>
+              <div class="panel-head">
+                <div><p class="eyebrow">历史趋势与异常峰值</p><h2>峰值回溯</h2></div>
+                <div class="history-window-toggle" role="group" aria-label="统计时间范围">
+                  <button type="button" class="history-window is-active" data-history-window="session" aria-pressed="true">本次开机</button>
+                  <button type="button" class="history-window" data-history-window="day" aria-pressed="false">最近 24 小时</button>
+                </div>
+              </div>
+              <div class="history-body">
+                <div class="history-peaks">
+                  <div id="historyPeakCpu" class="history-peak is-empty"><span class="history-peak-label">CPU 峰值</span><strong id="historyCpuValue">--</strong><small id="historyCpuMeta">等待采样</small></div>
+                  <div id="historyPeakMemory" class="history-peak is-empty"><span class="history-peak-label">内存峰值</span><strong id="historyMemoryValue">--</strong><small id="historyMemoryMeta">等待采样</small></div>
+                  <div id="historyPeakTemperature" class="history-peak is-empty"><span class="history-peak-label">温度峰值</span><strong id="historyTemperatureValue">--</strong><small id="historyTemperatureMeta">等待采样</small></div>
+                </div>
+                <div class="history-chart-wrap"><svg id="historyChart" class="history-chart" viewBox="0 0 900 200" role="img" aria-label="最近一小时的 CPU 与内存峰值曲线"><g id="historyChartGrid"></g><polyline id="historyCpuLine" class="trend-line history-cpu-line" points=""></polyline><polyline id="historyMemoryLine" class="trend-line history-memory-line" points=""></polyline><circle id="historyCpuPoint" class="history-cpu-point" r="4" cx="0" cy="0"></circle><circle id="historyMemoryPoint" class="history-memory-point" r="4" cx="0" cy="0"></circle></svg><div class="history-chart-foot"><div class="legend"><span><i class="legend-history-cpu"></i>CPU</span><span><i class="legend-history-memory"></i>内存</span></div><span id="historySampleNote" class="network-chart-summary">--</span></div></div>
+              </div>
+              <div class="history-events-head"><strong>异常峰值事件</strong><span id="historyEventCount" class="count">--</span></div><div id="historyEvents" class="history-events"><p class="empty">正在读取历史记录...</p></div><p id="historySourceNote" class="temperature-source-note">正在读取历史趋势，数据只保存在本机。</p>
+            </div>
+          </article>
         </div>
       </section>
 
       <section id="tab-processes" class="tab-panel" role="tabpanel" aria-labelledby="tabButtonProcesses" hidden>
+        <section class="panel process-panel network-process-panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">网络流量</p><h2>应用网络占用排行</h2></div>
+            <span id="networkProcessCount" class="count">--</span>
+          </div>
+          <div class="table-wrap">
+            <table class="process-table network-rank-table"><thead><tr><th>程序名称</th><th>网络速率</th><th>连接数</th><th>主要远端</th></tr></thead>
+            <tbody id="networkProcesses"><tr><td colspan="4" class="empty">正在读取网络流量...</td></tr></tbody></table>
+          </div>
+          <p id="networkProcessNote" class="temperature-source-note">正在统计每个程序的网络占用。</p>
+        </section>
         <section class="panel process-panel">
           <div class="panel-head">
             <div><p class="eyebrow">活动进程</p><h2>当前占用较高的程序</h2></div>
             <span id="processCount" class="count">--</span>
           </div>
           <div class="table-wrap">
-            <table class="process-table"><thead><tr><th>程序名称</th><th>CPU 占用</th><th>内存占用</th></tr></thead>
-            <tbody id="processes"><tr><td colspan="3" class="empty">正在读取进程...</td></tr></tbody></table>
+            <table class="process-table"><thead><tr><th>程序名称</th><th>CPU 占用</th><th>内存占用</th><th>网络速率</th></tr></thead>
+            <tbody id="processes"><tr><td colspan="4" class="empty">正在读取进程...</td></tr></tbody></table>
           </div>
         </section>
       </section>
@@ -186,6 +304,15 @@
         </div>
       </div>
       <div id="reportSummary" class="report-summary">读取数据后生成电脑当前状态分析。</div>
+      <div class="report-export-bar">
+        <div class="report-export-copy"><strong>一键导出体检报告</strong><span id="reportExportHint">Markdown 适合存档与分享；HTML 网页快照会带上趋势图，可直接打开或打印为 PDF。</span></div>
+        <div class="report-export-actions">
+          <button id="reportCopyMarkdown" class="button secondary" type="button">复制 Markdown</button>
+          <button id="reportDownloadMarkdown" class="button secondary" type="button">下载 Markdown</button>
+          <button id="reportDownloadHtml" class="button primary" type="button">下载 HTML 报告</button>
+          <button id="reportDownloadJson" class="button secondary" type="button">导出 JSON</button>
+        </div>
+      </div>
       <div class="report-grid">
         <section class="report-column">
           <div class="report-column-head">
@@ -223,6 +350,6 @@
       <div class="eco-dialog-actions"><button class="button secondary" value="cancel">取消</button><button id="ecoConfirm" class="button primary" value="default">启用节能模式</button></div>
     </form>
   </dialog>
-  <script src="/app.js?v=20261007-hardware-eco1"></script>
+  <script src="/app.js?v=20261008-report1"></script>
 </body>
 </html>

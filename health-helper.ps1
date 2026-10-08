@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 $appDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $cachePath = Join-Path $appDir "health-cache.json"
@@ -46,17 +46,38 @@ try {
           temperatureCelsius = $null
           wearPercent = $null
           powerOnHours = $null
-          smartReason = "正在读取可靠性数据"
+          smartReason = $null
           status = @($_.OperationalStatus | ForEach-Object { [string]$_ })
           mediaType = [string]$_.MediaType
           busType = [string]$_.BusType
           size = [double]$_.Size
         }
       })
-      $physicalDisksRead = $false
+      if (-not $physicalDisks.Count) { throw "Get-PhysicalDisk returned no disk" }
     } catch {
-      $physicalDisksRead = $false
-      $physicalDisks = @()
+      try {
+        $physicalDisks = @(Get-Disk -ErrorAction Stop | ForEach-Object {
+          [ordered]@{
+            name = [string]$_.FriendlyName
+            health = [string]$_.HealthStatus
+            serialNumber = [string]$_.SerialNumber
+            deviceId = [string]$_.Number
+            smartRead = $false
+            temperatureCelsius = $null
+            wearPercent = $null
+            powerOnHours = $null
+            smartReason = $null
+            status = @($_.OperationalStatus | ForEach-Object { [string]$_ })
+            mediaType = [string]$_.MediaType
+            busType = [string]$_.BusType
+            size = [double]$_.Size
+          }
+        })
+        $physicalDisksRead = $physicalDisks.Count -gt 0
+      } catch {
+        $physicalDisksRead = $false
+        $physicalDisks = @()
+      }
     }
 
     try {
@@ -85,13 +106,63 @@ try {
     }
 
     try {
-      $bios = Get-ItemProperty "HKLM:\HARDWARE\DESCRIPTION\System\BIOS" -ErrorAction Stop
+      # BIOS values come from the registry so a denied WMI/Win32_BIOS does not break them.
+      $bios = [ordered]@{ SystemManufacturer = ""; SystemProductName = ""; BIOSVersion = "" }
+      try {
+        $biosKey = Get-ItemProperty "HKLM:\HARDWARE\DESCRIPTION\System\BIOS" -ErrorAction Stop
+        $bios.SystemManufacturer = [string]$biosKey.SystemManufacturer
+        $bios.SystemProductName = [string]$biosKey.SystemProductName
+        $bios.BIOSVersion = [string]$biosKey.BIOSVersion
+      } catch {}
+      if (-not $bios.BIOSVersion) {
+        try {
+          $legacySystem = Get-ItemProperty "HKLM:\HARDWARE\DESCRIPTION\System" -ErrorAction Stop
+          $bios.BIOSVersion = [string](@($legacySystem.SystemBiosVersion) | Where-Object { $_ -match '^[A-Za-z0-9._-]{4,}$' } | Select-Object -First 1)
+        } catch {}
+      }
+      if (-not $bios.BIOSVersion) {
+        try {
+          $systemInformation = Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\SystemInformation" -ErrorAction Stop
+          $bios.BIOSVersion = [string]$systemInformation.BIOSVersion
+          if (-not $bios.SystemManufacturer) { $bios.SystemManufacturer = [string]$systemInformation.SystemManufacturer }
+          if (-not $bios.SystemProductName) { $bios.SystemProductName = [string]$systemInformation.SystemProductName }
+        } catch {}
+      }
       $gpu = $null
       try {
         $gpu = Get-CimInstance Win32_VideoController -ErrorAction Stop |
           Where-Object { $_.Name -and $_.Name -notmatch 'Basic Display|Remote Display|Indirect Display' } |
           Select-Object -First 1 Name,AdapterRAM,DriverVersion
       } catch {}
+      # AdapterRAM is a 32-bit counter and reads 0 on many Optimus laptops, so the display
+      # class registry (REG_QWORD HardwareInformation.qwMemorySize) is the primary source.
+      $registryGpu = $null
+      try {
+        $displayClass = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}'
+        $registryGpu = Get-ChildItem -LiteralPath $displayClass -ErrorAction Stop |
+          Where-Object { $_.PSChildName -match '^\d{4}$' } |
+          ForEach-Object {
+            $entry = Get-ItemProperty -LiteralPath $_.PSPath -ErrorAction SilentlyContinue
+            $raw = $entry.'HardwareInformation.qwMemorySize'
+            $bytes = 0
+            if ($raw -is [byte[]]) {
+              if ($raw.Length -ge 8) { $bytes = [BitConverter]::ToUInt64($raw, 0) }
+            } elseif ($null -ne $raw) {
+              $bytes = [uint64]$raw
+            }
+            [PSCustomObject]@{
+              name = [string]$entry.DriverDesc
+              driverVersion = [string]$entry.DriverVersion
+              memoryBytes = $bytes
+            }
+          } |
+          Where-Object { $_.name } |
+          Sort-Object -Property memoryBytes -Descending |
+          Select-Object -First 1
+      } catch { $registryGpu = $null }
+      $gpuName = if ($gpu -and $gpu.Name) { [string]$gpu.Name } elseif ($registryGpu) { [string]$registryGpu.name } else { "" }
+      $gpuMemoryBytes = if ($registryGpu -and [long]$registryGpu.memoryBytes -gt 0) { [long]$registryGpu.memoryBytes } elseif ($gpu) { [long]$gpu.AdapterRAM } else { 0 }
+      $gpuDriverVersion = if ($gpu -and $gpu.DriverVersion) { [string]$gpu.DriverVersion } elseif ($registryGpu) { [string]$registryGpu.driverVersion } else { "" }
       $memoryModules = @()
       try { $memoryModules = @(Get-CimInstance Win32_PhysicalMemory -ErrorAction Stop | ForEach-Object {
         [ordered]@{
@@ -108,9 +179,9 @@ try {
         model = [string]$bios.SystemProductName
         biosVersion = [string]$bios.BIOSVersion
         memoryBytes = 0
-        gpuName = [string]$gpu.Name
-        gpuMemoryBytes = [long]$gpu.AdapterRAM
-        gpuDriverVersion = [string]$gpu.DriverVersion
+        gpuName = $gpuName
+        gpuMemoryBytes = $gpuMemoryBytes
+        gpuDriverVersion = $gpuDriverVersion
         memorySpeedMHz = [int](($memoryModules | Measure-Object -Property configuredSpeedMHz -Maximum).Maximum)
         memoryModuleCount = [int]$memoryModules.Count
       }
@@ -131,24 +202,33 @@ try {
       $smartDisks = @(Get-PhysicalDisk -ErrorAction Stop | ForEach-Object {
         $disk = $_
         $reliability = @()
+        $reliabilityError = $null
         try {
           $reliability = @(Get-StorageReliabilityCounter -PhysicalDisk $disk -ErrorAction Stop)
-        } catch {}
+        } catch { $reliabilityError = $_.Exception.Message }
         $counter = $reliability | Select-Object -First 1
         $wear = if ($null -ne $counter.Wear -and [double]$counter.Wear -ge 0) { [double]$counter.Wear } else { $null }
         $identity = if ($disk.SerialNumber) { "serial:$($disk.SerialNumber.Trim())" } elseif ($disk.DeviceId) { "device:$($disk.DeviceId)" } else { "name:$($disk.FriendlyName)" }
+        $smartRead = ($null -ne $counter) -and (@($counter.PSObject.Properties | Where-Object { $_.Name -in @("Temperature", "Wear", "PowerOnHours", "ReadErrorsTotal", "WriteErrorsTotal") -and $null -ne $_.Value }).Count -gt 0)
         [ordered]@{
           identity = $identity
           name = [string]$disk.FriendlyName
           serialNumber = [string]$disk.SerialNumber
           deviceId = [string]$disk.DeviceId
-          smartRead = ($null -ne $counter) -and (@($counter.PSObject.Properties | Where-Object { $_.Name -in @("Temperature", "Wear", "PowerOnHours", "ReadErrorsTotal", "WriteErrorsTotal") -and $null -ne $_.Value }).Count -gt 0)
+          smartRead = $smartRead
+          smartSource = "Windows Storage 可靠性计数器"
           temperatureCelsius = if ($null -ne $counter.Temperature) { [double]$counter.Temperature } else { $null }
           wearPercent = $wear
           powerOnHours = if ($null -ne $counter.PowerOnHours) { [long]$counter.PowerOnHours } else { $null }
           readErrorsTotal = if ($null -ne $counter.ReadErrorsTotal) { [long]$counter.ReadErrorsTotal } else { $null }
           writeErrorsTotal = if ($null -ne $counter.WriteErrorsTotal) { [long]$counter.WriteErrorsTotal } else { $null }
-          reason = if ($null -eq $counter -or @($counter.PSObject.Properties | Where-Object { $_.Name -in @("Temperature", "Wear", "PowerOnHours", "ReadErrorsTotal", "WriteErrorsTotal") -and $null -ne $_.Value }).Count -eq 0) { "存储设备未提供 SMART 可靠性属性" } else { $null }
+          reason = if ($smartRead) {
+            $null
+          } elseif ($null -eq $counter) {
+            if ($reliabilityError) { "未能读取可靠性计数器：$reliabilityError" } else { "未能读取可靠性计数器，可尝试以管理员身份运行观察器" }
+          } else {
+            "存储设备未提供 SMART 可靠性属性"
+          }
         }
       })
       $hardwareSpecs.smartRead = $smartDisks.Count -gt 0 -and @($smartDisks | Where-Object { $_.smartRead }).Count -gt 0
@@ -158,7 +238,10 @@ try {
       $hardwareSpecs.smartDisks = @()
     }
     $hardwareSpecs.smartChecked = $true
-    $hardwareSpecs.diskReliabilityRead = $true
+    $hardwareSpecs.smartSource = if ($hardwareSpecs.smartRead) { "Windows Storage 可靠性计数器" } else { $null }
+    $hardwareSpecs.diskReliabilityRead = $hardwareSpecs.smartRead -eq $true
+    $notReadReasons = @($hardwareSpecs.smartDisks | Where-Object { -not $_.smartRead -and $_.reason } | ForEach-Object { $_.reason })
+    $hardwareSpecs.smartReason = if ($hardwareSpecs.smartRead) { $null } elseif ($notReadReasons.Count) { $notReadReasons[0] } else { "未能读取可靠性计数器，可尝试以管理员身份运行观察器" }
     $processes = @(
       Get-Process -ErrorAction SilentlyContinue |
         ForEach-Object {

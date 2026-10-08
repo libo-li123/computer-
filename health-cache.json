@@ -1,143 +1,154 @@
 ﻿{
-    "checkedAt":  "2026-10-07T07:46:39.7008310Z",
-    "batteryRead":  false,
+    "checkedAt":  "2026-10-08T02:53:30.2634547Z",
+    "batteryRead":  true,
     "battery":  [
-
+                    {
+                        "charge":  99,
+                        "status":  2
+                    }
                 ],
-    "physicalDisksRead":  false,
+    "physicalDisksRead":  true,
     "physicalDisks":  [
-
+                          {
+                              "name":  "SKHynix_HFS512GD9TNI-L2A0B",
+                              "health":  "Healthy",
+                              "serialNumber":  "NY0CN06161110CV3B   _00000001.",
+                              "deviceId":  "0",
+                              "smartRead":  false,
+                              "temperatureCelsius":  null,
+                              "wearPercent":  null,
+                              "powerOnHours":  null,
+                              "smartReason":  null,
+                              "status":  [
+                                             "OK"
+                                         ],
+                              "mediaType":  "SSD",
+                              "busType":  "NVMe",
+                              "size":  512110190592
+                          }
                       ],
+    "physicalDisksSampled":  true,
     "securityRead":  true,
     "antivirus":  [
                       {
-                          "name":  "Windows Defender Firewall",
-                          "state":  1,
-                          "source":  "Windows service"
-                      },
-                      {
-                          "name":  "Windows 安全中心服务",
-                          "state":  1,
-                          "source":  "Windows service"
-                      },
-                      {
-                          "name":  "Microsoft Defender 防病毒服务",
-                          "state":  1,
-                          "source":  "Windows service"
-                      },
-                      {
-                          "name":  "Security Center",
-                          "state":  1,
-                          "source":  "Windows service"
+                          "name":  "Windows Defender",
+                          "state":  397568
                       }
                   ],
-    "hardwareRead":  true,
+    "hardwareRead":  false,
     "hardware":  {
-                     "manufacturer":  "LENOVO",
-                     "model":  "82AV",
-                     "biosVersion":  "EFCN48WW",
-                     "memoryBytes":  0,
-                     "gpuName":  "",
-                     "gpuMemoryBytes":  0,
-                     "gpuDriverVersion":  "",
-                     "memorySpeedMHz":  0,
-                     "memoryModuleCount":  0
+
                  },
     "hardwareSpecs":  {
-                          "memorySpeedMHz":  0,
-                          "memoryModuleCount":  0,
+                          "smartRead":  false,
+                          "smartDisks":  [
+                                             {
+                                                 "identity":  "serial:NY0CN06161110CV3B   _00000001.",
+                                                 "name":  "SKHynix_HFS512GD9TNI-L2A0B",
+                                                 "serialNumber":  "NY0CN06161110CV3B   _00000001.",
+                                                 "deviceId":  "0",
+                                                 "smartRead":  false,
+                                                 "smartSource":  "Windows Storage 可靠性计数器",
+                                                 "temperatureCelsius":  null,
+                                                 "wearPercent":  null,
+                                                 "powerOnHours":  null,
+                                                 "readErrorsTotal":  null,
+                                                 "writeErrorsTotal":  null,
+                                                 "reason":  "未能读取可靠性计数器：无法从客户端中访问 CIM 资源。"
+                                             }
+                                         ],
                           "memoryModules":  [
 
                                             ],
-                          "smartRead":  false,
-                          "smartDisks":  [
-
-                                         ]
+                          "smartChecked":  true,
+                          "smartSource":  null,
+                          "diskReliabilityRead":  false,
+                          "smartReason":  "未能读取可靠性计数器：无法从客户端中访问 CIM 资源。"
                       },
     "processes":  [
                       {
-                          "name":  "webstorm64",
-                          "pid":  23588,
-                          "cpuTime":  1682.734375,
-                          "cpuPercent":  2,
-                          "memory":  1493667840
-                      },
-                      {
-                          "name":  "Doubao",
-                          "pid":  2996,
-                          "cpuTime":  1463.46875,
-                          "cpuPercent":  0,
-                          "memory":  355401728
-                      },
-                      {
-                          "name":  "wps",
-                          "pid":  14448,
-                          "cpuTime":  1226.46875,
+                          "name":  "FlClash",
+                          "pid":  7960,
+                          "cpuTime":  261.15625,
                           "cpuPercent":  1,
-                          "memory":  92631040
-                      },
-                      {
-                          "name":  "ChatGPT",
-                          "pid":  21484,
-                          "cpuTime":  1009.640625,
-                          "cpuPercent":  3,
-                          "memory":  603492352
-                      },
-                      {
-                          "name":  "ChatGPT",
-                          "pid":  8008,
-                          "cpuTime":  486.390625,
-                          "cpuPercent":  0,
-                          "memory":  108990464
-                      },
-                      {
-                          "name":  "LibreHardwareMonitor",
-                          "pid":  3588,
-                          "cpuTime":  384.765625,
-                          "cpuPercent":  0,
-                          "memory":  100007936
-                      },
-                      {
-                          "name":  "Doubao",
-                          "pid":  2420,
-                          "cpuTime":  378.21875,
-                          "cpuPercent":  1,
-                          "memory":  164003840
-                      },
-                      {
-                          "name":  "chrome",
-                          "pid":  15116,
-                          "cpuTime":  292.34375,
-                          "cpuPercent":  0,
-                          "memory":  128126976
-                      },
-                      {
-                          "name":  "chrome",
-                          "pid":  14816,
-                          "cpuTime":  239.921875,
-                          "cpuPercent":  0,
-                          "memory":  262508544
-                      },
-                      {
-                          "name":  "Doubao",
-                          "pid":  16380,
-                          "cpuTime":  218.03125,
-                          "cpuPercent":  0,
-                          "memory":  120479744
-                      },
-                      {
-                          "name":  "Doubao",
-                          "pid":  7980,
-                          "cpuTime":  215.828125,
-                          "cpuPercent":  0,
-                          "memory":  147202048
+                          "memory":  146382848
                       },
                       {
                           "name":  "explorer",
-                          "pid":  2856,
-                          "cpuTime":  204.328125,
+                          "pid":  9256,
+                          "cpuTime":  217.703125,
+                          "cpuPercent":  0,
+                          "memory":  226594816
+                      },
+                      {
+                          "name":  "webstorm64",
+                          "pid":  6088,
+                          "cpuTime":  190.21875,
+                          "cpuPercent":  12,
+                          "memory":  2689155072
+                      },
+                      {
+                          "name":  "powershell",
+                          "pid":  21200,
+                          "cpuTime":  181.78125,
                           "cpuPercent":  1,
-                          "memory":  205811712
+                          "memory":  139309056
+                      },
+                      {
+                          "name":  "ChatGPT",
+                          "pid":  17128,
+                          "cpuTime":  178.203125,
+                          "cpuPercent":  0,
+                          "memory":  576368640
+                      },
+                      {
+                          "name":  "ChatGPT",
+                          "pid":  19600,
+                          "cpuTime":  130.984375,
+                          "cpuPercent":  0,
+                          "memory":  327770112
+                      },
+                      {
+                          "name":  "Weixin",
+                          "pid":  7488,
+                          "cpuTime":  111.4375,
+                          "cpuPercent":  0,
+                          "memory":  299380736
+                      },
+                      {
+                          "name":  "chrome",
+                          "pid":  6676,
+                          "cpuTime":  109.3125,
+                          "cpuPercent":  0,
+                          "memory":  88698880
+                      },
+                      {
+                          "name":  "chrome",
+                          "pid":  3116,
+                          "cpuTime":  81.46875,
+                          "cpuPercent":  0,
+                          "memory":  205770752
+                      },
+                      {
+                          "name":  "LibreHardwareMonitor",
+                          "pid":  6840,
+                          "cpuTime":  70.90625,
+                          "cpuPercent":  0,
+                          "memory":  109785088
+                      },
+                      {
+                          "name":  "ChatGPT",
+                          "pid":  15296,
+                          "cpuTime":  64.3125,
+                          "cpuPercent":  0,
+                          "memory":  120971264
+                      },
+                      {
+                          "name":  "chrome",
+                          "pid":  10816,
+                          "cpuTime":  48.9375,
+                          "cpuPercent":  0,
+                          "memory":  150458368
                       }
                   ]
 }

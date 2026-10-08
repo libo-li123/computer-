@@ -48,16 +48,24 @@ try {
   $env:PORT = "5173"
 
   if (Test-Path -LiteralPath $healthHelper) {
-    Start-Process `
-      -FilePath $powershellExe `
-      -ArgumentList @(
-        "-NoProfile",
-        "-NonInteractive",
-        "-ExecutionPolicy", "Bypass",
-        "-File", $healthHelper
-      ) `
-      -WorkingDirectory $appDir `
-      -WindowStyle Hidden
+    # A silent syntax error in the helper means the health data never refreshes, so check it first.
+    $helperTokens = $null
+    $helperErrors = $null
+    [System.Management.Automation.Language.Parser]::ParseFile($healthHelper, [ref]$helperTokens, [ref]$helperErrors) | Out-Null
+    if (@($helperErrors).Count -gt 0) {
+      Add-Content -LiteralPath $logPath -Encoding UTF8 -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') health-helper.ps1 failed to parse: $(@($helperErrors)[0].Message)"
+    } else {
+      Start-Process `
+        -FilePath $powershellExe `
+        -ArgumentList @(
+          "-NoProfile",
+          "-NonInteractive",
+          "-ExecutionPolicy", "Bypass",
+          "-File", $healthHelper
+        ) `
+        -WorkingDirectory $appDir `
+        -WindowStyle Hidden
+    }
   }
 
   $monitorExe = Join-Path $appDir "tools\LibreHardwareMonitor\app\LibreHardwareMonitor.exe"

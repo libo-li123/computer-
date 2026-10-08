@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { paused: false, history: [], snapshot: null, temperatureShowAll: false, expandedProcessGroups: new Set(), ecoMode: null };
+const state = { paused: false, history: [], networkHistory: [], historySeries: [], historyWindow: "session", snapshot: null, temperatureShowAll: false, expandedProcessGroups: new Set(), ecoMode: null };
 const colors = { cpu: "#e86f51", memory: "#5b8def", grid: "#e5ebe6", text: "#819087" };
 
 function formatBytes(bytes) {
@@ -13,6 +13,12 @@ function formatUptime(seconds) {
   const hours = Math.floor(seconds / 3600); seconds %= 3600;
   const minutes = Math.floor(seconds / 60);
   return days ? `${days}天` : hours ? `${hours}小时` : `${minutes}分钟`;
+}
+function formatRate(value) {
+  if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) return "--";
+  const rate = Math.max(0, Number(value));
+  if (rate < 1024) return `${Math.round(rate)} B/s`;
+  return `${formatBytes(rate)}/s`;
 }
 function percent(value) { return `${Math.round(value)}%`; }
 function escapeHtml(value) {
@@ -92,13 +98,67 @@ function renderHardwareCheck(data) {
   const panel = $("#hardwareCheckPanel");
   if (panel) panel.innerHTML = rows.map(([name, value, detail]) => `<div class="hardware-row"><strong>${name}</strong><span>${value}</span><small>${detail}</small></div>`).join("");
 }
+function firstFinite(...values) {
+  for (const value of values) {
+    if (value === null || value === undefined || value === "") continue;
+    const number = Number(value);
+    if (Number.isFinite(number)) return number;
+  }
+  return null;
+}
+const networkSourceLabels = {
+  pdh: "Windows 性能计数器",
+  netstat: "netstat 累计差值",
+  lhm: "LibreHardwareMonitor"
+};
+function networkSourceLabel(value) {
+  if (!value) return "未连接";
+  return networkSourceLabels[value] || String(value);
+}
+function niceRateStep(value) {
+  const magnitude = 10 ** Math.floor(Math.log10(Math.max(value, 1e-6)));
+  for (const candidate of [1, 2, 2.5, 5, 10]) {
+    if (candidate * magnitude >= value) return candidate * magnitude;
+  }
+  return 10 * magnitude;
+}
+// Rounds the vertical axis up to a readable value so the labels stay tidy.
+function networkAxis(peakBytes) {
+  const units = [
+    { suffix: "B/s", scale: 1 },
+    { suffix: "KB/s", scale: 1024 },
+    { suffix: "MB/s", scale: 1024 ** 2 },
+    { suffix: "GB/s", scale: 1024 ** 3 }
+  ];
+  const target = Math.max(2048, Number(peakBytes) || 0) * 1.05;
+  let unit = units[0];
+  for (const candidate of units) {
+    if (target >= candidate.scale) unit = candidate;
+  }
+  const step = niceRateStep(target / 4 / unit.scale) * unit.scale;
+  return {
+    max: step * 4,
+    label: (value) => {
+      const scaled = value / unit.scale;
+      const rounded = scaled >= 100 ? Math.round(scaled) : Math.round(scaled * 10) / 10;
+      return `${rounded} ${unit.suffix}`;
+    }
+  };
+}
 function renderHardwareOverview(data) {
   const hardware = data.hostInfo || data.hardware || {};
   const health = data.systemHealth || {};
   const hardwareSpecs = data.hardwareSpecs || {};
   const disks = health.physicalDisks || [];
+  const gpuName = hardware.gpuName || hardwareSpecs.gpuName || null;
+  const gpuMemoryBytes = firstFinite(hardware.gpuMemoryBytes, hardwareSpecs.gpuMemoryBytes) || 0;
+  const gpuDriverVersion = hardware.gpuDriverVersion || hardwareSpecs.gpuDriverVersion || null;
+  const gpuDetails = [
+    gpuMemoryBytes > 0 ? `${formatBytes(gpuMemoryBytes)} 显存` : "显存容量未提供",
+    gpuDriverVersion ? `驱动 ${gpuDriverVersion}` : null
+  ].filter(Boolean).join(" · ");
   const rows = [
-    ["显卡", hardware.gpuName || "不支持/未读取", hardware.gpuName ? `${hardware.gpuMemoryBytes ? formatBytes(hardware.gpuMemoryBytes) + " 显存" : "显存容量未提供"}${hardware.gpuDriverVersion ? ` · 驱动 ${hardware.gpuDriverVersion}` : ""}` : "系统未返回显示适配器型号"],
+    ["显卡", gpuName || "不支持/未读取", gpuName ? gpuDetails : "系统未返回显示适配器型号"],
     ["内存规格", hardware.memoryDataRateMTs ? `${hardware.memoryDataRateMTs} MT/s` : "不支持/未读取", `${hardware.memoryBytes ? formatBytes(hardware.memoryBytes) : "容量未知"} · ${hardware.memoryModuleCount ? `${hardware.memoryModuleCount} 条内存` : "条数未提供"} · ${hardware.memoryDataRateSource || "内存速率为规格推算，不是实时频率"}`],
     ...(disks.length ? disks : [{ name: "物理磁盘", smartRead: false, smartReason: "系统没有提供物理磁盘或可靠性计数器" }]).map((disk) => {
       const smartEntry = (hardwareSpecs.smartDisks || []).find((item) =>
@@ -106,24 +166,35 @@ function renderHardwareOverview(data) {
         (item.deviceId && disk.deviceId && String(item.deviceId).toLowerCase() === String(disk.deviceId).toLowerCase()) ||
         (item.serialNumber && disk.serialNumber && item.serialNumber === disk.serialNumber)
       );
-      const smartRead = disk.smartRead === true || smartEntry?.smartRead === true;
-      const wear = Number(disk.wearPercent);
-      const temperature = Number(disk.temperatureCelsius ?? smartEntry?.temperatureCelsius);
-      const smartErrors = Number(smartEntry?.readErrorsTotal || 0) + Number(smartEntry?.writeErrorsTotal || 0);
-      const smartIssue = (disk.health && !/^healthy$/i.test(disk.health)) || (Number.isFinite(wear) && wear >= 80) ||
-        ((disk.temperatureCelsius != null || smartEntry?.temperatureCelsius != null) && Number.isFinite(temperature) && temperature >= 70) || smartErrors > 0;
-      const smartStatus = !smartRead ? "SMART 不支持" : smartIssue ? "需关注" : "SMART 正常";
+      const temperature = firstFinite(disk.temperatureCelsius, smartEntry?.temperatureCelsius);
+      const wear = firstFinite(disk.wearPercent, smartEntry?.wearPercent);
+      const life = firstFinite(disk.life, smartEntry?.life, wear != null ? 100 - wear : null);
+      const spare = firstFinite(disk.availableSpare, smartEntry?.availableSpare);
+      const powerOnHours = firstFinite(disk.powerOnHours, smartEntry?.powerOnHours);
+      const dataWritten = firstFinite(disk.dataWrittenBytes, smartEntry?.dataWrittenBytes);
+      const smartErrors = (firstFinite(smartEntry?.readErrorsTotal) || 0) + (firstFinite(smartEntry?.writeErrorsTotal) || 0);
+      const smartRead = disk.smartRead === true || smartEntry?.smartRead === true ||
+        temperature != null || life != null || powerOnHours != null;
+      const smartChecked = hardwareSpecs.smartChecked === true || smartRead;
+      const smartIssue = (disk.health && !/^healthy$/i.test(disk.health)) || (wear != null && wear >= 80) ||
+        (life != null && life < 20) || (temperature != null && temperature >= 70) || smartErrors > 0;
+      const smartStatus = smartRead ? (smartIssue ? "需关注" : "SMART 正常") : smartChecked ? "SMART 未读取" : "等待采样";
+      const smartReason = disk.smartReason || smartEntry?.reason || hardwareSpecs.smartReason ||
+        (smartChecked ? "系统与设备都未返回可靠性计数器，可尝试以管理员身份运行" : "等待 S.M.A.R.T. 采样");
       const details = [disk.mediaType, disk.busType, disk.health ? `系统状态 ${disk.health}` : null,
-        disk.temperatureCelsius != null || smartEntry?.temperatureCelsius != null ? `${disk.temperatureCelsius ?? smartEntry.temperatureCelsius}°C` : null,
-        disk.wearPercent != null || smartEntry?.wearPercent != null ? `磨损 ${disk.wearPercent ?? smartEntry.wearPercent}%` : null,
-        disk.powerOnHours != null || smartEntry?.powerOnHours != null ? `通电 ${disk.powerOnHours ?? smartEntry.powerOnHours} 小时` : null,
-        disk.smartReason, smartEntry?.reason, !hardwareSpecs.smartChecked && !smartRead ? "等待 S.M.A.R.T. 采样" : null].filter(Boolean).join(" · ");
-      return [`磁盘 · ${disk.name || "物理磁盘"}`, smartStatus, details || (smartRead ? "已读取设备可靠性计数器" : "设备/驱动未提供 S.M.A.R.T. 可靠性数据")];
+        temperature != null ? `${temperature}°C` : null,
+        life != null ? `寿命 ${Math.round(life)}%` : null,
+        spare != null && spare < 100 ? `可用备用 ${Math.round(spare)}%` : null,
+        wear != null && wear > 0 ? `磨损 ${wear}%` : null,
+        powerOnHours != null ? `通电 ${Math.round(powerOnHours)} 小时` : null,
+        dataWritten != null ? `累计写入 ${formatBytes(dataWritten)}` : null,
+        smartRead ? null : smartReason].filter(Boolean).join(" · ");
+      return [`磁盘 · ${disk.name || "物理磁盘"}`, smartStatus, details || (smartRead ? "已读取设备可靠性数据" : "设备/驱动未提供 S.M.A.R.T. 可靠性数据")];
     })
   ];
   const panel = $("#hardwareOverview");
   if (panel) panel.innerHTML = rows.map(([name, value, detail]) => {
-    const statusClass = value === "需关注" ? " is-warning" : /^(不支持|不支持\/未读取|SMART 不支持)$/.test(value) ? " is-unavailable" : "";
+    const statusClass = value === "需关注" ? " is-warning" : /^(不支持|不支持\/未读取|SMART 不支持|SMART 未读取|等待采样)$/.test(value) ? " is-unavailable" : "";
     return `<article class="hardware-spec-row${statusClass}"><strong>${escapeHtml(name)}</strong><span class="hardware-spec-value">${escapeHtml(value)}</span><small>${escapeHtml(detail)}</small></article>`;
   }).join("");
   const updated = $("#hardwareSpecsUpdated");
@@ -392,6 +463,158 @@ function drawSparklines() {
   drawSparkline("cpuSparklineLine", "cpuSparklinePoint", "cpu");
   drawSparkline("memorySparklineLine", "memorySparklinePoint", "memory");
 }
+function networkGroupLookup(groups) {
+  const map = new Map();
+  for (const group of groups || []) {
+    const name = String(group?.name || "").trim().toLowerCase();
+    if (name) map.set(name, group);
+  }
+  return map;
+}
+function renderNetwork(data) {
+  const network = data.network || {};
+  const adapters = Array.isArray(network.adapters) ? network.adapters : [];
+  const download = firstFinite(network.downloadBytesPerSecond);
+  const upload = firstFinite(network.uploadBytesPerSecond);
+  if (download != null || upload != null) {
+    state.networkHistory.push({ download: download || 0, upload: upload || 0 });
+    if (state.networkHistory.length > 40) state.networkHistory.shift();
+  }
+  const history = state.networkHistory;
+  const peakDownload = history.length ? Math.max(...history.map((item) => item.download)) : 0;
+  const peakUpload = history.length ? Math.max(...history.map((item) => item.upload)) : 0;
+  if ($("#networkDownload")) $("#networkDownload").textContent = formatRate(download);
+  if ($("#networkUpload")) $("#networkUpload").textContent = formatRate(upload);
+  if ($("#networkDownloadMeta")) $("#networkDownloadMeta").textContent = history.length ? `本轮峰值 ${formatRate(peakDownload)}` : "等待采样";
+  if ($("#networkUploadMeta")) $("#networkUploadMeta").textContent = history.length ? `本轮峰值 ${formatRate(peakUpload)}` : "等待采样";
+  if ($("#networkLiveState")) {
+    const stamp = network.checkedAt ? `采样于 ${new Date(network.checkedAt).toLocaleTimeString()}` : "等待采样";
+    $("#networkLiveState").innerHTML = `<i></i>${escapeHtml(stamp)}`;
+  }
+  const visibleAdapters = adapters.slice(0, 8);
+  const maxAdapterTotal = Math.max(1, ...visibleAdapters.map((adapter) => (adapter.downloadBytesPerSecond || 0) + (adapter.uploadBytesPerSecond || 0)));
+  const adapterBox = $("#networkAdapters");
+  if (adapterBox) {
+    adapterBox.innerHTML = visibleAdapters.length ? visibleAdapters.map((adapter) => {
+      const down = Number(adapter.downloadBytesPerSecond) || 0;
+      const up = Number(adapter.uploadBytesPerSecond) || 0;
+      const share = Math.round(Math.min(1, (down + up) / maxAdapterTotal) * 100);
+      const note = adapter.virtual ? "虚拟 / VPN 接口，未计入总量" : "物理网卡";
+      return `<div class="network-adapter${adapter.virtual ? " is-virtual" : ""}">
+        <div class="network-adapter-name"><strong>${escapeHtml(adapter.displayName || adapter.name || "网卡")}</strong><small>${note}${adapter.source === "LibreHardwareMonitor" ? " · LibreHardwareMonitor" : ""}</small></div>
+        <div class="network-adapter-bar"><i style="width:${share}%"></i></div>
+        <div class="network-adapter-reading"><span>↓ ${formatRate(down)}</span><span>↑ ${formatRate(up)}</span></div>
+      </div>`;
+    }).join("") : '<p class="empty">未读取到网卡速率，请确认 Windows 性能计数器或 LibreHardwareMonitor 可用。</p>';
+  }
+  if ($("#networkSourceNote")) {
+    const hasRate = download != null || upload != null;
+    const window = network.sampledSeconds ? ` · 采样窗口约 ${Number(network.sampledSeconds).toFixed(1)} 秒` : "";
+    if (!hasRate) {
+      $("#networkSourceNote").textContent = network.error
+        ? `网络速率暂不可用：${network.error}`
+        : "正在读取网络速率，速率与连接只在本机统计。";
+    } else {
+      $("#networkSourceNote").textContent = `数据来源：${networkSourceLabel(network.source)}${window}。下载/上传为整机合计，虚拟网卡（VPN、代理、虚拟交换机）不计入总量。` +
+        (network.error ? ` 程序级流量统计暂不可用：${network.error}` : "");
+    }
+  }
+  drawNetworkChart();
+  renderNetworkProcesses(network);
+}
+function drawNetworkChart() {
+  const chart = $("#networkChart"), grid = $("#networkChartGrid");
+  if (!chart || !grid) return;
+  const width = 900, height = 220, pad = { top: 16, right: 16, bottom: 16, left: 86 };
+  const history = state.networkHistory.slice(-40);
+  const plotWidth = width - pad.left - pad.right;
+  const plotHeight = height - pad.top - pad.bottom;
+  const axis = networkAxis(Math.max(0, ...history.map((item) => Math.max(item.download, item.upload))));
+  grid.innerHTML = "";
+  for (let index = 0; index <= 4; index++) {
+    const y = pad.top + plotHeight * index / 4;
+    const zeroLine = index === 4;
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", pad.left); line.setAttribute("x2", width - pad.right);
+    line.setAttribute("y1", y); line.setAttribute("y2", y);
+    line.setAttribute("stroke", zeroLine ? "#d8e2da" : colors.grid);
+    if (!zeroLine) line.setAttribute("stroke-dasharray", "3 6");
+    grid.appendChild(line);
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", pad.left - 12); label.setAttribute("y", y + 4);
+    label.setAttribute("text-anchor", "end"); label.setAttribute("fill", colors.text); label.setAttribute("font-size", "11");
+    label.textContent = axis.label(axis.max * (1 - index / 4));
+    grid.appendChild(label);
+  }
+  const summary = $("#networkChartSummary");
+  const series = [
+    ["download", "networkDownLine", "networkDownPoint", "networkDownArea"],
+    ["upload", "networkUpLine", "networkUpPoint", "networkUpArea"]
+  ];
+  if (history.length < 2) {
+    for (const [, lineId, , areaId] of series) {
+      $(`#${lineId}`)?.setAttribute("points", "");
+      $(`#${areaId}`)?.setAttribute("points", "");
+    }
+    if (summary) summary.textContent = "正在积累采样数据...";
+    return;
+  }
+  const xFor = (index) => pad.left + index * plotWidth / (history.length - 1);
+  const yFor = (value) => pad.top + (1 - Math.min(1, Math.max(0, Number(value) || 0) / axis.max)) * plotHeight;
+  const baseline = (pad.top + plotHeight).toFixed(1);
+  const latest = history[history.length - 1];
+  if (summary) {
+    summary.textContent = `当前 ↓ ${formatRate(latest.download)} · ↑ ${formatRate(latest.upload)} · 已采样 ${history.length} 次`;
+  }
+  for (const [key, lineId, pointId, areaId] of series) {
+    const coords = history.map((item, index) => `${xFor(index).toFixed(1)},${yFor(item[key]).toFixed(1)}`);
+    $(`#${lineId}`)?.setAttribute("points", coords.join(" "));
+    $(`#${areaId}`)?.setAttribute("points", [`${xFor(0).toFixed(1)},${baseline}`, ...coords, `${xFor(history.length - 1).toFixed(1)},${baseline}`].join(" "));
+    const [x, y] = coords[coords.length - 1].split(",");
+    const point = $(`#${pointId}`);
+    point?.setAttribute("cx", x);
+    point?.setAttribute("cy", y);
+  }
+}
+function renderNetworkProcesses(network) {
+  const container = $("#networkProcesses");
+  if (!container) return;
+  const perProcessAvailable = Boolean(network?.processRateSource);
+  const groups = (network?.groups || []).filter((group) => (group.bytesPerSecond || 0) > 0 || (group.connections || 0) > 0);
+  if ($("#networkProcessCount")) {
+    $("#networkProcessCount").textContent = groups.length ? `${groups.length} 个程序占用网络` : "--";
+  }
+  if (!groups.length) {
+    const message = !perProcessAvailable
+      ? "程序级网络统计暂不可用：Windows 性能计数器读取失败，可尝试以管理员身份运行观察器。"
+      : "当前没有检测到程序占用网络。";
+    container.innerHTML = `<tr><td colspan="4" class="empty">${message}</td></tr>`;
+  } else {
+    const top = groups.slice(0, 12);
+    const maxRate = Math.max(1, ...top.map((group) => group.bytesPerSecond || 0));
+    container.innerHTML = top.map((group) => {
+      const rate = Number(group.bytesPerSecond) || 0;
+      const share = perProcessAvailable ? Math.round(Math.min(1, rate / maxRate) * 100) : 0;
+      const peers = (group.peers || []).length ? group.peers.join("、") : "无外部连接";
+      const pids = (group.pids || []).map(Number).filter((pid) => Number.isInteger(pid) && pid > 0);
+      const action = pids.length ? processActionButton(pids, processDisplayName(group.name)) : "";
+      const connectionText = group.connections
+        ? `${group.connections} 个${group.established ? ` · 已建立 ${group.established}` : ""}`
+        : "—";
+      return `<tr class="network-rank-row">
+        <td class="process-name process-name-cell"><span>${escapeHtml(processDisplayName(group.name))}</span><span class="process-inline-actions">${action}</span></td>
+        <td><div class="network-rate"><span class="network-rate-bar"><i style="width:${share}%"></i></span><strong>${perProcessAvailable ? formatRate(rate) : "—"}</strong></div></td>
+        <td>${connectionText}</td>
+        <td class="network-peers" title="${escapeHtml(peers)}">${escapeHtml(peers)}</td>
+      </tr>`;
+    }).join("");
+  }
+  if ($("#networkProcessNote")) {
+    $("#networkProcessNote").textContent = perProcessAvailable
+      ? `速率按每个程序的“其他 I/O”计数器估算（覆盖网络套接字，同时包含管道等其他设备 I/O），观察器自身不计入；连接信息来自 netstat，后台自动采样。来源：${networkSourceLabel(network.processRateSource)}。`
+      : `程序级流量需要 Windows 性能计数器（PDH），当前不可用；表格中的连接与端口信息仍来自 netstat。`;
+  }
+}
 function renderDisks(disks) {
   $("#disks").innerHTML = disks.length ? disks.map((disk) => {
     const used = disk.total ? (disk.total - disk.free) / disk.total * 100 : 0;
@@ -435,20 +658,32 @@ function processActionButton(pids, label) {
   const description = pids.length > 1 ? `结束 ${label} 中的 ${pids.length} 个进程` : `结束 ${label}`;
   return `<button class="process-kill" type="button" data-process-kill data-pids="${escapeHtml(pidList)}" data-process-label="${escapeHtml(label)}" title="${escapeHtml(description)}">结束进程</button>`;
 }
-function renderProcessRow(process, label, groupKey, index, child = false) {
+function renderProcessRow(process, label, groupKey, index, child = false, networkRate = null) {
   const name = child ? `${label} 子进程 ${index + 1}` : label;
   return `<tr class="process-child-row" data-process-child-of="${escapeHtml(groupKey)}">
     <td class="process-name process-name-cell ${child ? "process-child-name" : ""}"><span>${escapeHtml(name)}</span><span class="process-inline-actions">${processActionButton([process.pid], `${label} 子进程`)}</span></td>
     <td>${formatProcessCpu(process.cpuPercent)}</td>
     <td>${formatBytes(process.memory)}</td>
+    <td class="process-network">${networkRate == null ? "—" : formatRate(networkRate)}</td>
   </tr>`;
 }
-function renderProcesses(processes) {
+function renderProcesses(processes, networkGroups) {
   const groups = groupProcesses(processes);
+  const networkByName = networkGroupLookup(networkGroups);
+  const rateForGroup = (key) => {
+    const group = networkByName.get(String(key || "").toLowerCase());
+    return group ? Number(group.bytesPerSecond) || 0 : null;
+  };
+  const rateForPid = (key, pid) => {
+    const group = networkByName.get(String(key || "").toLowerCase());
+    if (!group) return null;
+    const entry = (group.rates || []).find((item) => Number(item.pid) === Number(pid));
+    return entry ? Number(entry.bytesPerSecond) : null;
+  };
   const total = (processes || []).length;
   $("#processCount").textContent = `${groups.length} 个程序 · ${total} 个进程`;
   if (!groups.length) {
-    $("#processes").innerHTML = '<tr><td colspan="3" class="empty">未读取到进程</td></tr>';
+    $("#processes").innerHTML = '<tr><td colspan="4" class="empty">未读取到进程</td></tr>';
     return;
   }
   $("#processes").innerHTML = groups.map((group) => {
@@ -458,12 +693,14 @@ function renderProcesses(processes) {
     const toggle = hasChildren
       ? `<button class="process-group-toggle" type="button" data-process-group-toggle="${escapeHtml(group.key)}" aria-expanded="${expanded}" title="展开或收起子进程"><span class="process-chevron">${expanded ? "▾" : "▸"}</span><span>${escapeHtml(name)}</span></button>`
       : `<span class="process-single-name">${escapeHtml(name)}</span>`;
+    const groupRate = rateForGroup(group.key);
     const groupRow = `<tr class="process-group-row" data-process-group-row="${escapeHtml(group.key)}">
       <td class="process-name process-name-cell">${toggle}<span class="process-inline-actions">${processActionButton(group.items.map((item) => item.pid), name)}</span></td>
       <td>${formatProcessCpu(group.cpuPercent)}</td>
       <td>${formatBytes(group.memory)}</td>
+      <td class="process-network">${groupRate == null ? "—" : formatRate(groupRate)}</td>
     </tr>`;
-    const childRows = hasChildren ? group.items.map((process, index) => renderProcessRow(process, group.label, group.key, index, true)).join("") : "";
+    const childRows = hasChildren ? group.items.map((process, index) => renderProcessRow(process, group.label, group.key, index, true, rateForPid(group.key, process.pid))).join("") : "";
     return groupRow + childRows.replace(/<tr /g, `<tr${expanded ? "" : " hidden"} `);
   }).join("");
 }
@@ -484,7 +721,7 @@ function reportSuggestion(title, detail) {
   </article>`;
 }
 
-function renderAnalysisReport(data) {
+function buildAnalysis(data) {
   const health = data.systemHealth || {};
   const memoryTotal = Number(data.memory?.total || 0);
   const memoryUsed = Number(data.memory?.used || 0);
@@ -614,23 +851,511 @@ function renderAnalysisReport(data) {
     data.timestamp ? `采样时间：${new Date(data.timestamp).toLocaleTimeString()}` : "采样时间：未知"
   ].join(" · ");
 
-  const scoreElement = $("#reportScore");
-  if (scoreElement) scoreElement.textContent = `${score}`;
-  if (scoreElement?.parentElement) {
-    scoreElement.parentElement.className = `report-score ${dangerCount ? "danger" : concernCount ? "warn" : dataGapCount ? "info" : "good"}`;
-  }
-  if ($("#reportScoreLabel")) $("#reportScoreLabel").textContent = scoreLabel;
-  if ($("#reportGenerated")) $("#reportGenerated").textContent = `基于本机实时快照 · ${data.timestamp ? new Date(data.timestamp).toLocaleString() : "等待时间"}`;
-  if ($("#reportSummary")) $("#reportSummary").textContent = summary;
-  if ($("#reportAttentionCount")) $("#reportAttentionCount").textContent = `${attentionCount} 项`;
-  if ($("#reportSuggestionCount")) $("#reportSuggestionCount").textContent = `${suggestions.length} 条`;
-  if ($("#reportEvidence")) $("#reportEvidence").textContent = evidence;
-  if ($("#reportFindings")) $("#reportFindings").innerHTML = findings.map((item) => reportItem(item.level, item.title, item.detail)).join("");
-  if ($("#reportSuggestions")) $("#reportSuggestions").innerHTML = suggestions.length
-    ? suggestions.map(([title, detail]) => reportSuggestion(title, detail)).join("")
-    : reportSuggestion("保持当前状态", "继续保持通风、及时更新系统，并定期查看本报告。");
+  return {
+    score,
+    scoreLabel,
+    scoreLevel: dangerCount ? "danger" : concernCount ? "warn" : dataGapCount ? "info" : "good",
+    summary,
+    evidence,
+    findings,
+    suggestions,
+    attentionCount,
+    concernCount,
+    dangerCount,
+    dataGapCount,
+    memoryTotal,
+    memoryUsed,
+    memoryPercent,
+    cpu,
+    highestTemperature,
+    physicalDisks,
+    batteries
+  };
 }
 
+function renderAnalysisReport(data) {
+  const model = buildAnalysis(data);
+  const scoreElement = $("#reportScore");
+  if (scoreElement) scoreElement.textContent = `${model.score}`;
+  if (scoreElement?.parentElement) scoreElement.parentElement.className = `report-score ${model.scoreLevel}`;
+  if ($("#reportScoreLabel")) $("#reportScoreLabel").textContent = model.scoreLabel;
+  if ($("#reportGenerated")) $("#reportGenerated").textContent = `基于本机实时快照 · ${data.timestamp ? new Date(data.timestamp).toLocaleString() : "等待时间"}`;
+  if ($("#reportSummary")) $("#reportSummary").textContent = model.summary;
+  if ($("#reportAttentionCount")) $("#reportAttentionCount").textContent = `${model.attentionCount} 项`;
+  if ($("#reportSuggestionCount")) $("#reportSuggestionCount").textContent = `${model.suggestions.length} 条`;
+  if ($("#reportEvidence")) $("#reportEvidence").textContent = model.evidence;
+  if ($("#reportFindings")) $("#reportFindings").innerHTML = model.findings.map((item) => reportItem(item.level, item.title, item.detail)).join("");
+  if ($("#reportSuggestions")) {
+    $("#reportSuggestions").innerHTML = model.suggestions.length
+      ? model.suggestions.map(([title, detail]) => reportSuggestion(title, detail)).join("")
+      : reportSuggestion("保持当前状态", "继续保持通风、及时更新系统，并定期查看本报告。");
+  }
+}
+
+function pad2(value) {
+  return String(value).padStart(2, "0");
+}
+function formatClock(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--";
+  const now = new Date();
+  const sameDay = date.toDateString() === now.toDateString();
+  const time = `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
+  return sameDay ? time : `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${time}`;
+}
+function formatStamp(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--";
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
+}
+function formatEventDuration(seconds) {
+  const value = Number(seconds) || 0;
+  if (value >= 3600) return `${Math.floor(value / 3600)} 小时 ${Math.round((value % 3600) / 60)} 分`;
+  if (value >= 60) return `${Math.round(value / 60)} 分钟`;
+  if (value >= 5) return `${value} 秒`;
+  return "瞬时";
+}
+const historyPeakTones = {
+  cpu: [{ level: "danger", value: 90 }, { level: "warn", value: 75 }],
+  memory: [{ level: "danger", value: 90 }, { level: "warn", value: 80 }],
+  temperature: [{ level: "danger", value: 95 }, { level: "warn", value: 85 }]
+};
+function peakTone(metric, value) {
+  const thresholds = historyPeakTones[metric] || [];
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "";
+  if (thresholds.find((item) => number >= item.value)?.level === "danger") return "is-danger";
+  if (thresholds.find((item) => number >= item.value)?.level === "warn") return "is-warn";
+  return "is-good";
+}
+function activeHistoryWindow(history) {
+  const key = state.historyWindow === "day" ? "day" : "session";
+  const window = history?.peaks?.[key] || null;
+  return { key, window };
+}
+function renderHistory(data) {
+  const history = data.history || {};
+  const { key, window: current } = activeHistoryWindow(history);
+  const tiles = [
+    { metric: "cpu", tileId: "historyPeakCpu", valueId: "historyCpuValue", metaId: "historyCpuMeta", peak: current?.cpu, unit: "%" },
+    { metric: "memory", tileId: "historyPeakMemory", valueId: "historyMemoryValue", metaId: "historyMemoryMeta", peak: current?.memory, unit: "%" },
+    { metric: "temperature", tileId: "historyPeakTemperature", valueId: "historyTemperatureValue", metaId: "historyTemperatureMeta", peak: current?.temperature, unit: "°C" }
+  ];
+  for (const tile of tiles) {
+    const valueElement = $(`#${tile.valueId}`);
+    const metaElement = $(`#${tile.metaId}`);
+    const tileElement = $(`#${tile.tileId}`);
+    if (valueElement) valueElement.textContent = tile.peak ? `${tile.peak.value}${tile.unit}` : "--";
+    if (tileElement) {
+      tileElement.className = `history-peak ${tile.peak ? peakTone(tile.metric, tile.peak.value) : "is-empty"}`;
+    }
+    if (metaElement) {
+      if (!tile.peak) {
+        metaElement.textContent = "暂无采样数据";
+      } else {
+        const parts = [`发生在 ${formatClock(tile.peak.at)}`];
+        if (tile.peak.process) {
+          const detail = tile.peak.processDetail ? `（${tile.peak.processDetail}）` : "";
+          parts.push(`当时最高：${processDisplayName(tile.peak.process)}${detail}`);
+        }
+        if (tile.peak.restored) parts.push("来自持久化历史");
+        metaElement.textContent = parts.join(" · ");
+      }
+    }
+  }
+  for (const button of document.querySelectorAll("[data-history-window]")) {
+    const active = button.dataset.historyWindow === key;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  }
+  const events = history.events || [];
+  if ($("#historyEventCount")) $("#historyEventCount").textContent = events.length ? `${events.length} 条` : "--";
+  const container = $("#historyEvents");
+  if (container) {
+    container.innerHTML = events.length ? events.map((event) => {
+      const level = event.level === "danger" ? "danger" : "warn";
+      const process = event.process ? ` · 当时最高：${escapeHtml(processDisplayName(event.process))}` : "";
+      return `<article class="history-event ${level}">
+        <span class="history-event-time">${escapeHtml(formatClock(event.peakAt))}</span>
+        <strong>${escapeHtml(event.metricLabel)} 峰值 ${event.peak}${escapeHtml(event.unit)}</strong>
+        <small>持续约 ${escapeHtml(formatEventDuration(event.durationSeconds))}${process}</small>
+      </article>`;
+    }).join("") : '<p class="empty">最近没有明显异常峰值。</p>';
+  }
+  state.historySeries = Array.isArray(history.series) ? history.series : [];
+  drawHistoryChart();
+  if ($("#historySampleNote")) {
+    $("#historySampleNote").textContent = `最近一小时 · ${state.historySeries.length} 个数据点（每 30 秒取峰值）`;
+  }
+  if ($("#historySourceNote")) {
+    const label = current?.label || (key === "day" ? "最近 24 小时" : "本次开机以来");
+    const interval = Math.round((Number(history.sampleIntervalMs) || 5000) / 1000);
+    const saved = history.savedAt ? `上次写入磁盘 ${formatClock(history.savedAt)}` : "尚未写入磁盘";
+    $("#historySourceNote").textContent = `${label} · 每 ${interval} 秒采样 · 保留 ${history.retentionHours || 24} 小时 · 已记录 ${history.sampleCount || 0} 个采样点 · ${saved}。关闭或重启观察器后历史仍然保留。`;
+  }
+}
+function drawHistoryChart() {
+  const grid = $("#historyChartGrid");
+  if (!grid) return;
+  const width = 900, height = 200, pad = { top: 14, right: 14, bottom: 14, left: 46 };
+  const plotWidth = width - pad.left - pad.right;
+  const plotHeight = height - pad.top - pad.bottom;
+  const series = (state.historySeries || []).filter((item) => Number.isFinite(Number(item.at)));
+  grid.innerHTML = "";
+  for (let index = 0; index <= 4; index++) {
+    const y = pad.top + plotHeight * index / 4;
+    const zeroLine = index === 4;
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", pad.left); line.setAttribute("x2", width - pad.right);
+    line.setAttribute("y1", y); line.setAttribute("y2", y);
+    line.setAttribute("stroke", zeroLine ? "#d8e2da" : colors.grid);
+    if (!zeroLine) line.setAttribute("stroke-dasharray", "3 6");
+    grid.appendChild(line);
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", pad.left - 10); label.setAttribute("y", y + 4);
+    label.setAttribute("text-anchor", "end"); label.setAttribute("fill", colors.text); label.setAttribute("font-size", "11");
+    label.textContent = `${100 - index * 25}%`;
+    grid.appendChild(label);
+  }
+  const seriesDefs = [["cpu", "historyCpuLine", "historyCpuPoint"], ["memory", "historyMemoryLine", "historyMemoryPoint"]];
+  if (series.length < 2) {
+    for (const [, lineId] of seriesDefs) {
+      $(`#${lineId}`)?.setAttribute("points", "");
+      const point = $(`#${lineId.replace("Line", "Point")}`);
+      point?.setAttribute("cx", "0");
+      point?.setAttribute("cy", "0");
+    }
+    return;
+  }
+  const xFor = (index) => pad.left + index * plotWidth / (series.length - 1);
+  const yFor = (value) => pad.top + (1 - Math.min(1, Math.max(0, Number(value) || 0) / 100)) * plotHeight;
+  for (const [metric, lineId, pointId] of seriesDefs) {
+    const available = series.map((item, index) => ({ index, value: Number(item[metric]) })).filter((item) => Number.isFinite(item.value));
+    if (available.length < 2) {
+      $(`#${lineId}`)?.setAttribute("points", "");
+      continue;
+    }
+    const coords = available.map((item) => `${xFor(item.index).toFixed(1)},${yFor(item.value).toFixed(1)}`);
+    $(`#${lineId}`)?.setAttribute("points", coords.join(" "));
+    const [x, y] = coords[coords.length - 1].split(",");
+    const point = $(`#${pointId}`);
+    point?.setAttribute("cx", x);
+    point?.setAttribute("cy", y);
+  }
+}
+function reportFileName(prefix, extension) {
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}-${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
+  return `${prefix}-${stamp}.${extension}`;
+}
+function downloadTextFile(filename, text, mime) {
+  const blob = new Blob([text], { type: mime });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+function levelLabel(level) {
+  return { danger: "高风险", warn: "需关注", good: "正常", info: "信息" }[level] || "信息";
+}
+function metricRows(data) {
+  const analysis = buildAnalysis(data);
+  const hardware = data.hostInfo || data.hardware || {};
+  const health = data.systemHealth || {};
+  const disks = data.disks || [];
+  const systemDisk = disks.find((disk) => String(disk.name).toUpperCase() === "C:") || disks[0];
+  const diskDetail = analysis.physicalDisks
+    .map((disk) => `${disk.name || "磁盘"} ${disk.health || "状态未知"}${disk.life != null ? ` · 寿命 ${Math.round(disk.life)}%` : ""}${disk.temperatureCelsius != null ? ` · ${disk.temperatureCelsius}°C` : ""}`)
+    .join("；");
+  return [
+    ["处理器", `${Math.round(Number(data.cpu) || 0)}%`, `${data.logicalCores || "-"} 个逻辑处理器 · ${hardware.processor || "未知处理器"}`],
+    ["内存", analysis.memoryPercent == null ? "--" : `${Math.round(analysis.memoryPercent)}%`, `${formatBytes(analysis.memoryUsed)} / ${formatBytes(analysis.memoryTotal)}${hardware.memoryDataRateMTs ? ` · ${hardware.memoryDataRateMTs} MT/s` : ""}`],
+    ["温度", analysis.highestTemperature == null ? "未获取" : `${analysis.highestTemperature.toFixed(1)}°C`, health.temperatureSource ? `来源 ${health.temperatureSource} · ${(health.temperatureSensors || []).length} 个传感器` : "未连接温度数据源"],
+    ["系统盘", systemDisk ? `${formatBytes(systemDisk.free)} 可用` : "未读取", systemDisk ? `${systemDisk.name} 共 ${formatBytes(systemDisk.total)}` : "—"],
+    ["磁盘健康", analysis.physicalDisks.length ? `${analysis.physicalDisks.length} 块物理磁盘` : "未获取", diskDetail || "未返回可靠性数据"],
+    ["网络", `${formatRate(data.network?.downloadBytesPerSecond)} 下载 / ${formatRate(data.network?.uploadBytesPerSecond)} 上传`, `来源 ${networkSourceLabel(data.network?.source)}`],
+    ["电池", analysis.batteries.length ? `${analysis.batteries[0].charge}%` : "未检测到", analysis.batteries.length ? "已读取电池信息" : "台式机或未提供电池"],
+    ["运行时间", formatUptime(data.uptime || 0), `开机于 ${formatStamp(Date.now() - (data.uptime || 0) * 1000)}`],
+    ["整机", `${hardware.manufacturer || "未知厂商"} ${hardware.model || ""}`.trim(), `${hardware.gpuName || "未知显卡"}${hardware.gpuMemoryBytes ? ` · ${formatBytes(hardware.gpuMemoryBytes)} 显存` : ""}`]
+  ];
+}
+function osLabel(data, hardware) {
+  const name = String(hardware?.windowsName || data?.platform || "").replace(/_NT\b/, "").trim();
+  return name || "未知系统";
+}
+function buildReportModel(data) {
+  return {
+    data,
+    analysis: buildAnalysis(data),
+    history: data.history || {},
+    network: data.network || {},
+    hardware: data.hostInfo || data.hardware || {},
+    generatedAt: new Date()
+  };
+}
+function reportToMarkdown(model) {
+  const { data, analysis, history, network } = model;
+  const hardware = model.hardware;
+  const lines = [
+    "# 电脑健康诊断报告",
+    "",
+    `- 生成时间：${formatStamp(model.generatedAt)}`,
+    `- 设备：${`${hardware.manufacturer || "未知厂商"} ${hardware.model || ""}`.trim()}（${data.host} · ${data.platform}）`,
+    `- 操作系统：${osLabel(data, hardware)}`,
+    `- 处理器：${hardware.processor || "未知"}（${data.logicalCores || "-"} 个逻辑处理器）`,
+    `- 已连续运行：${formatUptime(data.uptime || 0)}`,
+    `- 健康评分：${analysis.score} / 100（${analysis.scoreLabel}）`,
+    "",
+    analysis.summary,
+    "",
+    "## 一、关键指标",
+    "",
+    "| 项目 | 当前值 | 说明 |",
+    "| --- | --- | --- |"
+  ];
+  for (const [name, value, detail] of metricRows(data)) {
+    lines.push(`| ${name} | ${value} | ${detail} |`);
+  }
+  lines.push("", "## 二、异常峰值回溯", "");
+  for (const [key, label] of [["session", "本次开机以来"], ["day", "最近 24 小时"]]) {
+    const window = history.peaks?.[key];
+    lines.push(`### ${label}`, "", "| 指标 | 峰值 | 发生时间 | 当时占用最高的程序 |", "| --- | --- | --- | --- |");
+    for (const [metric, name] of [["cpu", "CPU"], ["memory", "内存"], ["temperature", "温度"]]) {
+      const peak = window?.[metric];
+      const process = peak?.process ? `${processDisplayName(peak.process)}${peak.processDetail ? `（${peak.processDetail}）` : ""}` : "—";
+      lines.push(`| ${name} | ${peak ? `${peak.value}${peak.unit}` : "未记录"} | ${peak ? formatStamp(peak.at) : "—"} | ${process} |`);
+    }
+    lines.push("");
+  }
+  const events = history.events || [];
+  lines.push(`### 异常峰值事件（最近 ${events.length} 条）`, "");
+  if (events.length) {
+    lines.push("| 峰值时间 | 指标 | 峰值 | 持续 | 当时占用最高的程序 |", "| --- | --- | --- | --- | --- |");
+    for (const event of events) {
+      lines.push(`| ${formatStamp(event.peakAt)} | ${event.metricLabel} | ${event.peak}${event.unit} | ${formatEventDuration(event.durationSeconds)} | ${event.process ? processDisplayName(event.process) : "—"} |`);
+    }
+  } else {
+    lines.push("没有记录到超过阈值的异常峰值。");
+  }
+  const groups = (network.groups || []).slice(0, 5);
+  lines.push("", "## 三、网络与带宽", "");
+  lines.push(`- 当前速率：下载 ${formatRate(network.downloadBytesPerSecond)} · 上传 ${formatRate(network.uploadBytesPerSecond)}（来源：${networkSourceLabel(network.source)}）`);
+  const adapters = (network.adapters || []).filter((adapter) => !adapter.virtual);
+  if (adapters.length) {
+    lines.push(`- 物理网卡：${adapters.map((adapter) => `${adapter.displayName || adapter.name}（↓ ${formatRate(adapter.downloadBytesPerSecond)} / ↑ ${formatRate(adapter.uploadBytesPerSecond)}）`).join("；")}`);
+  }
+  if (groups.length) {
+    lines.push("", "| 程序 | 网络速率 | 连接数 | 主要远端 |", "| --- | --- | --- | --- |");
+    for (const group of groups) {
+      lines.push(`| ${processDisplayName(group.name)} | ${formatRate(group.bytesPerSecond)} | ${group.connections || 0} | ${(group.peers || []).join("、") || "—"} |`);
+    }
+  }
+  lines.push("", "## 四、分析发现", "");
+  for (const finding of analysis.findings) {
+    lines.push(`- 【${levelLabel(finding.level)}】${finding.title}：${finding.detail}`);
+  }
+  lines.push("", "## 五、处理建议", "");
+  if (analysis.suggestions.length) {
+    analysis.suggestions.forEach(([title, detail], index) => lines.push(`${index + 1}. **${title}**：${detail}`));
+  } else {
+    lines.push("1. 继续保持当前使用习惯，并定期查看本报告。");
+  }
+  lines.push("", "## 六、数据依据", "", `- ${analysis.evidence}`);
+  lines.push(`- 历史记录：${history.sampleCount || 0} 个采样点，保留 ${history.retentionHours || 24} 小时，每 ${Math.round((Number(history.sampleIntervalMs) || 5000) / 1000)} 秒采样一次`);
+  lines.push("- 所有数据只在本机读取，不会上传到网络。");
+  return `${lines.join("\n")}\n`;
+}
+function svgSnapshot(selector) {
+  const element = $(selector);
+  return element?.outerHTML || "";
+}
+function reportToHtml(model) {
+  const { data, analysis, history, network } = model;
+  const hardware = model.hardware;
+  const escape = (value) => escapeHtml(String(value ?? ""));
+  const rows = metricRows(data)
+    .map(([name, value, detail]) => `<tr><th>${escape(name)}</th><td class="value">${escape(value)}</td><td>${escape(detail)}</td></tr>`)
+    .join("");
+  const peakWindow = (key, label) => {
+    const window = history.peaks?.[key];
+    const cells = [["cpu", "CPU"], ["memory", "内存"], ["temperature", "温度"]].map(([metric, name]) => {
+      const peak = window?.[metric];
+      const process = peak?.process ? `${processDisplayName(peak.process)}${peak.processDetail ? `（${peak.processDetail}）` : ""}` : "—";
+      return `<tr><th>${name}</th><td class="value">${peak ? `${escape(peak.value)}${escape(peak.unit)}` : "未记录"}</td><td>${peak ? escape(formatStamp(peak.at)) : "—"}</td><td>${escape(process)}</td></tr>`;
+    }).join("");
+    return `<h3>${escape(label)}</h3><table class="grid"><thead><tr><th>指标</th><th>峰值</th><th>发生时间</th><th>当时占用最高的程序</th></tr></thead><tbody>${cells}</tbody></table>`;
+  };
+  const events = (history.events || []).map((event) => `<tr class="${event.level === "danger" ? "danger" : "warn"}">
+      <td>${escape(formatStamp(event.peakAt))}</td><td>${escape(event.metricLabel)}</td><td class="value">${escape(event.peak)}${escape(event.unit)}</td>
+      <td>${escape(formatEventDuration(event.durationSeconds))}</td><td>${escape(event.process ? processDisplayName(event.process) : "—")}</td></tr>`).join("");
+  const findings = analysis.findings.map((finding) => `<li class="${finding.level}"><strong>${escape(finding.title)}</strong><span>${escape(finding.detail)}</span><em>${escape(levelLabel(finding.level))}</em></li>`).join("");
+  const suggestions = (analysis.suggestions.length
+    ? analysis.suggestions.map(([title, detail]) => `<li class="suggestion"><strong>${escape(title)}</strong><span>${escape(detail)}</span></li>`)
+    : ['<li class="suggestion"><strong>保持当前状态</strong><span>继续保持通风、及时更新系统，并定期查看本报告。</span></li>']).join("");
+  const networkGroups = (network.groups || []).slice(0, 5).map((group) => `<tr><td>${escape(processDisplayName(group.name))}</td><td class="value">${escape(formatRate(group.bytesPerSecond))}</td><td>${escape(group.connections || 0)}</td><td>${escape((group.peers || []).join("、") || "—")}</td></tr>`).join("");
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>电脑健康诊断报告 · ${escape(formatStamp(model.generatedAt))}</title>
+<style>
+:root { --ink:#1f2a23; --muted:#7d8b82; --line:#e5ebe6; --blue:#5b8def; --coral:#e86f51; --lime:#9bbb5d; --yellow:#e0a44b; --paper:#f4f7f4; }
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; margin: 0; padding: 28px 22px 48px; }
+main { background: #fff; border: 1px solid var(--line); border-radius: 10px; margin: 0 auto; max-width: 980px; padding: 30px 32px 36px; }
+.eyebrow { color: #87938a; font-size: 11px; font-weight: 800; letter-spacing: .14em; margin: 0 0 6px; }
+h1 { font-size: 27px; margin: 0 0 8px; }
+h2 { border-bottom: 1px solid var(--line); font-size: 18px; margin: 30px 0 14px; padding-bottom: 8px; }
+h3 { color: var(--muted); font-size: 13px; margin: 18px 0 8px; }
+.meta { color: var(--muted); font-size: 12px; line-height: 1.8; margin: 0; }
+.score { align-items: center; background: #eaf4e6; border-radius: 8px; display: flex; gap: 16px; margin: 18px 0 6px; padding: 14px 18px; }
+.score strong { font-size: 32px; line-height: 1; }
+.score span { color: #4c8a4f; font-size: 12px; font-weight: 700; }
+.score p { color: #52615a; font-size: 13px; line-height: 1.6; margin: 0; }
+table { border-collapse: collapse; font-size: 13px; width: 100%; }
+th, td { border-bottom: 1px solid var(--line); padding: 9px 10px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-size: 11px; font-weight: 800; }
+td.value { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+table.grid tbody th, table.grid tbody td:first-child { width: 150px; }
+ul { list-style: none; margin: 0; padding: 0; }
+li { background: #fafcf9; border-left: 3px solid var(--lime); border-radius: 6px; display: grid; gap: 4px; margin-bottom: 8px; padding: 10px 12px; position: relative; }
+li.warn { background: #fffaf0; border-left-color: var(--yellow); }
+li.danger { background: #fff7f4; border-left-color: var(--coral); }
+li.info { background: #f6f8fc; border-left-color: var(--blue); }
+li.suggestion { border-left-color: #8ba894; }
+li strong { font-size: 13px; }
+li span { color: #66736a; font-size: 12px; line-height: 1.55; }
+li em { color: var(--muted); font-size: 10px; font-style: normal; position: absolute; right: 10px; top: 10px; }
+.charts { display: grid; gap: 14px; }
+.chart { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px 6px; }
+.chart h3 { margin: 0 0 6px; }
+svg { display: block; height: auto; overflow: visible; width: 100%; }
+.trend-line, .sparkline-line { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5; }
+.cpu-line, .cpu-point, .accent-coral .sparkline-line, .accent-coral .sparkline-point { stroke: var(--coral); fill: var(--coral); }
+.memory-line, .memory-point, .accent-lime .sparkline-line, .accent-lime .sparkline-point { stroke: var(--blue); fill: var(--blue); }
+.network-line { fill: none; stroke-width: 2.5; }
+.network-down-line { stroke: var(--blue); } .network-up-line { stroke: #dea03f; }
+.network-down-area { fill: var(--blue); fill-opacity: .1; stroke: none; } .network-up-area { fill: #e0a44b; fill-opacity: .12; stroke: none; }
+.network-point, .trend-point { stroke: #fff; stroke-width: 2; }
+.network-down-point { fill: var(--blue); } .network-up-point { fill: #dea03f; }
+.history-cpu-line { fill: none; stroke: var(--coral); stroke-width: 2.5; } .history-memory-line { fill: none; stroke: var(--blue); stroke-width: 2.5; }
+.history-cpu-point { fill: var(--coral); stroke: #fff; stroke-width: 2; } .history-memory-point { fill: var(--blue); stroke: #fff; stroke-width: 2; }
+footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; line-height: 1.7; margin-top: 26px; padding-top: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">PC HEALTH REPORT</p>
+  <h1>电脑健康诊断报告</h1>
+  <p class="meta">
+    生成时间：${escape(formatStamp(model.generatedAt))}<br>
+    设备：${escape(`${hardware.manufacturer || "未知厂商"} ${hardware.model || ""}`.trim())}（${escape(data.host)} · ${escape(data.platform)}）<br>
+    操作系统：${escape(osLabel(data, hardware))} · 处理器：${escape(hardware.processor || "未知")} · 已运行 ${escape(formatUptime(data.uptime || 0))}
+  </p>
+  <div class="score">
+    <strong>${escape(analysis.score)}</strong>
+    <div><span>${escape(analysis.scoreLabel)}</span><p>${escape(analysis.summary)}</p></div>
+  </div>
+
+  <h2>一、关键指标</h2>
+  <table><tbody>${rows}</tbody></table>
+
+  <h2>二、异常峰值回溯</h2>
+  ${peakWindow("session", "本次开机以来")}
+  ${peakWindow("day", "最近 24 小时")}
+  <h3>异常峰值事件（最近 ${(history.events || []).length} 条）</h3>
+  ${events
+    ? `<table class="grid"><thead><tr><th>峰值时间</th><th>指标</th><th>峰值</th><th>持续</th><th>当时占用最高的程序</th></tr></thead><tbody>${events}</tbody></table>`
+    : "<p>没有记录到超过阈值的异常峰值。</p>"}
+
+  <h2>三、实时趋势快照</h2>
+  <div class="charts">
+    <div class="chart"><h3>处理器与内存（最近约 2 分钟）</h3>${svgSnapshot("#chart")}</div>
+    <div class="chart"><h3>网络上下行（最近约 40 次采样）</h3>${svgSnapshot("#networkChart")}</div>
+    <div class="chart"><h3>历史峰值曲线（最近一小时）</h3>${svgSnapshot("#historyChart")}</div>
+  </div>
+
+  <h2>四、网络与带宽</h2>
+  <table><tbody>
+    <tr><th>当前速率</th><td class="value">↓ ${escape(formatRate(network.downloadBytesPerSecond))} · ↑ ${escape(formatRate(network.uploadBytesPerSecond))}</td><td>来源 ${escape(networkSourceLabel(network.source))}</td></tr>
+  </tbody></table>
+  ${networkGroups
+    ? `<h3>程序网络占用前 ${(network.groups || []).slice(0, 5).length} 名</h3><table class="grid"><thead><tr><th>程序</th><th>网络速率</th><th>连接数</th><th>主要远端</th></tr></thead><tbody>${networkGroups}</tbody></table>`
+    : ""}
+
+  <h2>五、分析发现</h2>
+  <ul>${findings}</ul>
+
+  <h2>六、处理建议</h2>
+  <ul>${suggestions}</ul>
+
+  <footer>
+    数据依据：${escape(analysis.evidence)}<br>
+    历史记录：${escape(history.sampleCount || 0)} 个采样点 · 保留 ${escape(history.retentionHours || 24)} 小时 · 每 ${escape(Math.round((Number(history.sampleIntervalMs) || 5000) / 1000))} 秒采样一次<br>
+    所有数据只在本机读取，不会上传到网络。本报告由电脑使用观察器生成。
+  </footer>
+</main>
+</body>
+</html>
+`;
+}
+function exportStatus(message) {
+  const status = $("#status");
+  if (status) status.textContent = message;
+}
+function exportMarkdownReport() {
+  if (!state.snapshot) {
+    exportStatus("暂无可导出的数据");
+    return;
+  }
+  const model = buildReportModel(state.snapshot);
+  downloadTextFile(reportFileName("电脑健康报告", "md"), reportToMarkdown(model), "text/markdown;charset=utf-8");
+  exportStatus(`已导出 Markdown 诊断报告（${formatStamp(model.generatedAt)}）`);
+}
+function exportHtmlReport() {
+  if (!state.snapshot) {
+    exportStatus("暂无可导出的数据");
+    return;
+  }
+  const model = buildReportModel(state.snapshot);
+  downloadTextFile(reportFileName("电脑健康报告", "html"), reportToHtml(model), "text/html;charset=utf-8");
+  exportStatus(`已导出 HTML 网页快照（${formatStamp(model.generatedAt)}）`);
+}
+function exportJsonSnapshot() {
+  if (!state.snapshot) {
+    exportStatus("暂无可导出的数据");
+    return;
+  }
+  downloadTextFile(reportFileName("pc-observer", "json"), JSON.stringify(state.snapshot, null, 2), "application/json");
+  exportStatus("已导出原始 JSON 快照");
+}
+async function copyMarkdownReport(button) {
+  if (!state.snapshot) {
+    exportStatus("暂无可导出的数据");
+    return;
+  }
+  const text = reportToMarkdown(buildReportModel(state.snapshot));
+  let copied = false;
+  try {
+    await navigator.clipboard.writeText(text);
+    copied = true;
+  } catch {
+    copied = false;
+  }
+  if (!copied) {
+    downloadTextFile(reportFileName("电脑健康报告", "md"), text, "text/markdown;charset=utf-8");
+    exportStatus("剪贴板不可用，已改为下载 Markdown 报告");
+    return;
+  }
+  if (button) {
+    const original = button.textContent;
+    button.textContent = "已复制";
+    setTimeout(() => { button.textContent = original; }, 1600);
+  }
+  exportStatus("诊断报告已复制为 Markdown");
+}
 function render(data) {
   state.snapshot = data;
   if (data.ecoMode) state.ecoMode = data.ecoMode;
@@ -653,13 +1378,15 @@ function render(data) {
   renderHardwareOverview(data);
   renderAnalysisReport(data);
   renderTemperatureDetails(data);
+  renderNetwork(data);
+  renderHistory(data);
   if (data.disks?.length) {
     renderDisks(data.disks);
   } else {
     $("#disks").innerHTML = '<p class="empty">正在读取磁盘...</p>';
   }
   if (data.processes?.length) {
-    renderProcesses(data.processes);
+    renderProcesses(data.processes, data.network?.groups);
   }
   drawChart();
   drawSparklines();
@@ -748,8 +1475,14 @@ function bindProcessControls() {
       const key = toggle.dataset.processGroupToggle;
       if (state.expandedProcessGroups.has(key)) state.expandedProcessGroups.delete(key);
       else state.expandedProcessGroups.add(key);
-      renderProcesses(state.snapshot?.processes || []);
+      renderProcesses(state.snapshot?.processes || [], state.snapshot?.network?.groups);
     }
+  });
+  $("#networkProcesses")?.addEventListener("click", (event) => {
+    const killButton = event.target.closest("[data-process-kill]");
+    if (!killButton) return;
+    event.stopPropagation();
+    terminateProcessFromButton(killButton);
   });
 }
 function ecoCandidateProcesses() {
@@ -849,11 +1582,17 @@ $("#healthRefresh")?.addEventListener("click", async () => {
   }
 });
 $("#pause")?.addEventListener("click", () => { state.paused = !state.paused; $("#pause").textContent = state.paused ? "继续" : "暂停"; $("#status").textContent = state.paused ? "已暂停" : "已连接"; });
-  $("#export")?.addEventListener("click", () => {
-  if (!state.snapshot) return;
-  const blob = new Blob([JSON.stringify(state.snapshot, null, 2)], { type: "application/json" });
-  const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `pc-observer-${new Date().toISOString().replaceAll(":", "-")}.json`; link.click(); URL.revokeObjectURL(link.href);
-  });
+  $("#export")?.addEventListener("click", () => exportMarkdownReport());
+  $("#reportCopyMarkdown")?.addEventListener("click", (event) => copyMarkdownReport(event.currentTarget));
+  $("#reportDownloadMarkdown")?.addEventListener("click", () => exportMarkdownReport());
+  $("#reportDownloadHtml")?.addEventListener("click", () => exportHtmlReport());
+  $("#reportDownloadJson")?.addEventListener("click", () => exportJsonSnapshot());
+  for (const button of document.querySelectorAll("[data-history-window]")) {
+    button.addEventListener("click", () => {
+      state.historyWindow = button.dataset.historyWindow === "day" ? "day" : "session";
+      if (state.snapshot) renderHistory(state.snapshot);
+    });
+  }
   $("#hardwareCheck")?.addEventListener("click", () => {
     const panel = $("#hardwareCheckPanel");
     if (panel) panel.classList.toggle("is-visible");
@@ -871,7 +1610,12 @@ $("#pause")?.addEventListener("click", () => { state.paused = !state.paused; $("
     panel.hidden = !willOpen;
     button.setAttribute("aria-expanded", String(willOpen));
     button.textContent = willOpen ? "收起报告" : "分析报告";
-    if (willOpen && state.snapshot) renderAnalysisReport(state.snapshot);
+    if (willOpen) {
+      if (state.snapshot) renderAnalysisReport(state.snapshot);
+      try {
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch {}
+    }
   });
 }
 async function start() {
