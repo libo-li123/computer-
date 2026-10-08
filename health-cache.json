@@ -1,5 +1,5 @@
 ﻿{
-    "checkedAt":  "2026-10-08T02:53:30.2634547Z",
+    "checkedAt":  "2026-10-08T04:17:31.1753056Z",
     "batteryRead":  true,
     "battery":  [
                     {
@@ -67,88 +67,88 @@
                       },
     "processes":  [
                       {
-                          "name":  "FlClash",
-                          "pid":  7960,
-                          "cpuTime":  261.15625,
+                          "name":  "Doubao",
+                          "pid":  7768,
+                          "cpuTime":  554.5,
                           "cpuPercent":  1,
-                          "memory":  146382848
+                          "memory":  615206912
                       },
                       {
-                          "name":  "explorer",
-                          "pid":  9256,
-                          "cpuTime":  217.703125,
-                          "cpuPercent":  0,
-                          "memory":  226594816
+                          "name":  "FlClash",
+                          "pid":  7960,
+                          "cpuTime":  541.546875,
+                          "cpuPercent":  1,
+                          "memory":  144941056
                       },
                       {
                           "name":  "webstorm64",
                           "pid":  6088,
-                          "cpuTime":  190.21875,
-                          "cpuPercent":  12,
-                          "memory":  2689155072
+                          "cpuTime":  496.859375,
+                          "cpuPercent":  0,
+                          "memory":  1989492736
                       },
                       {
                           "name":  "powershell",
                           "pid":  21200,
-                          "cpuTime":  181.78125,
-                          "cpuPercent":  1,
-                          "memory":  139309056
+                          "cpuTime":  366.671875,
+                          "cpuPercent":  0,
+                          "memory":  132669440
                       },
                       {
-                          "name":  "ChatGPT",
-                          "pid":  17128,
-                          "cpuTime":  178.203125,
+                          "name":  "explorer",
+                          "pid":  9256,
+                          "cpuTime":  347.53125,
                           "cpuPercent":  0,
-                          "memory":  576368640
-                      },
-                      {
-                          "name":  "ChatGPT",
-                          "pid":  19600,
-                          "cpuTime":  130.984375,
-                          "cpuPercent":  0,
-                          "memory":  327770112
-                      },
-                      {
-                          "name":  "Weixin",
-                          "pid":  7488,
-                          "cpuTime":  111.4375,
-                          "cpuPercent":  0,
-                          "memory":  299380736
-                      },
-                      {
-                          "name":  "chrome",
-                          "pid":  6676,
-                          "cpuTime":  109.3125,
-                          "cpuPercent":  0,
-                          "memory":  88698880
-                      },
-                      {
-                          "name":  "chrome",
-                          "pid":  3116,
-                          "cpuTime":  81.46875,
-                          "cpuPercent":  0,
-                          "memory":  205770752
+                          "memory":  238153728
                       },
                       {
                           "name":  "LibreHardwareMonitor",
                           "pid":  6840,
-                          "cpuTime":  70.90625,
+                          "cpuTime":  169.4375,
                           "cpuPercent":  0,
-                          "memory":  109785088
+                          "memory":  98287616
                       },
                       {
-                          "name":  "ChatGPT",
-                          "pid":  15296,
-                          "cpuTime":  64.3125,
+                          "name":  "Doubao",
+                          "pid":  25580,
+                          "cpuTime":  166.984375,
                           "cpuPercent":  0,
-                          "memory":  120971264
+                          "memory":  171311104
+                      },
+                      {
+                          "name":  "Doubao",
+                          "pid":  22952,
+                          "cpuTime":  158.4375,
+                          "cpuPercent":  1,
+                          "memory":  209514496
+                      },
+                      {
+                          "name":  "Taskmgr",
+                          "pid":  23224,
+                          "cpuTime":  156.390625,
+                          "cpuPercent":  0,
+                          "memory":  48287744
+                      },
+                      {
+                          "name":  "Weixin",
+                          "pid":  7488,
+                          "cpuTime":  142.84375,
+                          "cpuPercent":  0,
+                          "memory":  316125184
                       },
                       {
                           "name":  "chrome",
-                          "pid":  10816,
-                          "cpuTime":  48.9375,
+                          "pid":  6676,
+                          "cpuTime":  133.90625,
                           "cpuPercent":  0,
-                          "memory":  150458368
+                          "memory":  96849920
+                      },
+                      {
+                          "name":  "chrome",
+                          "pid":  3116,
+                          "cpuTime":  109.28125,
+                          "cpuPercent":  0,
+                          "memory":  223244288
                       }
                   ]
 }

@@ -144,49 +144,6 @@
           <div id="networkAdapters" class="network-adapters"><p class="empty">正在读取网卡速率...</p></div>
           <p id="networkSourceNote" class="temperature-source-note">正在读取网络速率，速率与连接只在本机统计。</p>
         </article>
-        
-            <div><p class="eyebrow">历史趋势与异常峰值</p><h2>峰值回溯</h2></div>
-            <div class="history-window-toggle" role="group" aria-label="统计时间范围">
-              <button type="button" class="history-window is-active" data-history-window="session" aria-pressed="true">本次开机</button>
-              <button type="button" class="history-window" data-history-window="day" aria-pressed="false">最近 24 小时</button>
-            </div>
-          </div>
-          <div class="history-body">
-            <div class="history-peaks">
-              <div id="historyPeakCpu" class="history-peak is-empty">
-                <span class="history-peak-label">CPU 峰值</span>
-                <strong id="historyCpuValue">--</strong>
-                <small id="historyCpuMeta">等待采样</small>
-              </div>
-              <div id="historyPeakMemory" class="history-peak is-empty">
-                <span class="history-peak-label">内存峰值</span>
-                <strong id="historyMemoryValue">--</strong>
-                <small id="historyMemoryMeta">等待采样</small>
-              </div>
-              <div id="historyPeakTemperature" class="history-peak is-empty">
-                <span class="history-peak-label">温度峰值</span>
-                <strong id="historyTemperatureValue">--</strong>
-                <small id="historyTemperatureMeta">等待采样</small>
-              </div>
-            </div>
-            <div class="history-chart-wrap">
-              <svg id="historyChart" class="history-chart" viewBox="0 0 900 200" role="img" aria-label="最近一小时的 CPU 与内存峰值曲线">
-                <g id="historyChartGrid"></g>
-                <polyline id="historyCpuLine" class="trend-line history-cpu-line" points=""></polyline>
-                <polyline id="historyMemoryLine" class="trend-line history-memory-line" points=""></polyline>
-                <circle id="historyCpuPoint" class="history-cpu-point" r="4" cx="0" cy="0"></circle>
-                <circle id="historyMemoryPoint" class="history-memory-point" r="4" cx="0" cy="0"></circle>
-              </svg>
-              <div class="history-chart-foot">
-                <div class="legend"><span><i class="legend-history-cpu"></i>CPU</span><span><i class="legend-history-memory"></i>内存</span></div>
-                <span id="historySampleNote" class="network-chart-summary">--</span>
-              </div>
-            </div>
-          </div>
-          <div class="history-events-head"><strong>异常峰值事件</strong><span id="historyEventCount" class="count">--</span></div>
-          <div id="historyEvents" class="history-events"><p class="empty">正在读取历史记录...</p></div>
-          <p id="historySourceNote" class="temperature-source-note">正在读取历史趋势，数据只保存在本机。</p>
-        </article>
         <article class="panel disk-panel overview-disk-panel">
           <div class="panel-head"><div><p class="eyebrow">存储概览</p><h2>磁盘空间</h2></div></div>
           <div id="disks" class="disk-list"><p class="empty">正在读取磁盘...</p></div>

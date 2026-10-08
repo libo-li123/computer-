@@ -463,6 +463,21 @@ function drawSparklines() {
   drawSparkline("cpuSparklineLine", "cpuSparklinePoint", "cpu");
   drawSparkline("memorySparklineLine", "memorySparklinePoint", "memory");
 }
+function drawNetworkMiniChart() {
+  const history = state.networkHistory.slice(-40);
+  const width = 240, height = 58, inset = 3;
+  const max = Math.max(1, ...history.map((item) => Math.max(Number(item.download) || 0, Number(item.upload) || 0)));
+  for (const [key, id] of [["download", "networkMiniDownLine"], ["upload", "networkMiniUpLine"]]) {
+    const line = $(`#${id}`);
+    if (!line) continue;
+    const points = history.map((item, index) => {
+      const x = inset + index * (width - inset * 2) / Math.max(1, history.length - 1);
+      const y = inset + (1 - Math.min(1, (Number(item[key]) || 0) / max)) * (height - inset * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    line.setAttribute("points", points.length === 1 ? `${points[0]} ${width - inset},${points[0].split(",")[1]}` : points.join(" "));
+  }
+}
 function networkGroupLookup(groups) {
   const map = new Map();
   for (const group of groups || []) {
@@ -487,6 +502,9 @@ function renderNetwork(data) {
   if ($("#networkUpload")) $("#networkUpload").textContent = formatRate(upload);
   if ($("#networkDownloadMeta")) $("#networkDownloadMeta").textContent = history.length ? `本轮峰值 ${formatRate(peakDownload)}` : "等待采样";
   if ($("#networkUploadMeta")) $("#networkUploadMeta").textContent = history.length ? `本轮峰值 ${formatRate(peakUpload)}` : "等待采样";
+  if ($("#networkMiniDownload")) $("#networkMiniDownload").textContent = formatRate(download);
+  if ($("#networkMiniUpload")) $("#networkMiniUpload").textContent = formatRate(upload);
+  if ($("#networkMiniMeta")) $("#networkMiniMeta").textContent = history.length ? `最近 ${history.length} 次采样` : "等待采样";
   if ($("#networkLiveState")) {
     const stamp = network.checkedAt ? `采样于 ${new Date(network.checkedAt).toLocaleTimeString()}` : "等待采样";
     $("#networkLiveState").innerHTML = `<i></i>${escapeHtml(stamp)}`;
@@ -520,6 +538,7 @@ function renderNetwork(data) {
     }
   }
   drawNetworkChart();
+  drawNetworkMiniChart();
   renderNetworkProcesses(network);
 }
 function drawNetworkChart() {
@@ -1561,6 +1580,16 @@ function bindControls() {
   bindDashboardTabs();
   bindHealthCards();
   bindProcessControls();
+  $("#historyToggle")?.addEventListener("click", () => {
+    const body = $("#historyCollapseBody");
+    const button = $("#historyToggle");
+    if (!body || !button) return;
+    const expanded = body.hidden;
+    body.hidden = !expanded;
+    button.setAttribute("aria-expanded", String(expanded));
+    const label = button.querySelector(".collapse-chevron");
+    if (label) label.textContent = expanded ? "收起" : "展开";
+  });
   $("#ecoModeToggle")?.addEventListener("click", openEcoModeDialog);
   $("#ecoConfirm")?.addEventListener("click", (event) => {
     event.preventDefault();

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>电脑健康诊断报告 · 2026-10-08 10:09:06</title>
+<style>
+:root { --ink:#1f2a23; --muted:#7d8b82; --line:#e5ebe6; --blue:#5b8def; --coral:#e86f51; --lime:#9bbb5d; --yellow:#e0a44b; --paper:#f4f7f4; }
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; margin: 0; padding: 28px 22px 48px; }
+main { background: #fff; border: 1px solid var(--line); border-radius: 10px; margin: 0 auto; max-width: 980px; padding: 30px 32px 36px; }
+.eyebrow { color: #87938a; font-size: 11px; font-weight: 800; letter-spacing: .14em; margin: 0 0 6px; }
+h1 { font-size: 27px; margin: 0 0 8px; }
+h2 { border-bottom: 1px solid var(--line); font-size: 18px; margin: 30px 0 14px; padding-bottom: 8px; }
+h3 { color: var(--muted); font-size: 13px; margin: 18px 0 8px; }
+.meta { color: var(--muted); font-size: 12px; line-height: 1.8; margin: 0; }
+.score { align-items: center; background: #eaf4e6; border-radius: 8px; display: flex; gap: 16px; margin: 18px 0 6px; padding: 14px 18px; }
+.score strong { font-size: 32px; line-height: 1; }
+.score span { color: #4c8a4f; font-size: 12px; font-weight: 700; }
+.score p { color: #52615a; font-size: 13px; line-height: 1.6; margin: 0; }
+table { border-collapse: collapse; font-size: 13px; width: 100%; }
+th, td { border-bottom: 1px solid var(--line); padding: 9px 10px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-size: 11px; font-weight: 800; }
+td.value { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+table.grid tbody th, table.grid tbody td:first-child { width: 150px; }
+ul { list-style: none; margin: 0; padding: 0; }
+li { background: #fafcf9; border-left: 3px solid var(--lime); border-radius: 6px; display: grid; gap: 4px; margin-bottom: 8px; padding: 10px 12px; position: relative; }
+li.warn { background: #fffaf0; border-left-color: var(--yellow); }
+li.danger { background: #fff7f4; border-left-color: var(--coral); }
+li.info { background: #f6f8fc; border-left-color: var(--blue); }
+li.suggestion { border-left-color: #8ba894; }
+li strong { font-size: 13px; }
+li span { color: #66736a; font-size: 12px; line-height: 1.55; }
+li em { color: var(--muted); font-size: 10px; font-style: normal; position: absolute; right: 10px; top: 10px; }
+.charts { display: grid; gap: 14px; }
+.chart { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px 6px; }
+.chart h3 { margin: 0 0 6px; }
+svg { display: block; height: auto; overflow: visible; width: 100%; }
+.trend-line, .sparkline-line { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5; }
+.cpu-line, .cpu-point, .accent-coral .sparkline-line, .accent-coral .sparkline-point { stroke: var(--coral); fill: var(--coral); }
+.memory-line, .memory-point, .accent-lime .sparkline-line, .accent-lime .sparkline-point { stroke: var(--blue); fill: var(--blue); }
+.network-line { fill: none; stroke-width: 2.5; }
+.network-down-line { stroke: var(--blue); } .network-up-line { stroke: #dea03f; }
+.network-down-area { fill: var(--blue); fill-opacity: .1; stroke: none; } .network-up-area { fill: #e0a44b; fill-opacity: .12; stroke: none; }
+.network-point, .trend-point { stroke: #fff; stroke-width: 2; }
+.network-down-point { fill: var(--blue); } .network-up-point { fill: #dea03f; }
+.history-cpu-line { fill: none; stroke: var(--coral); stroke-width: 2.5; } .history-memory-line { fill: none; stroke: var(--blue); stroke-width: 2.5; }
+.history-cpu-point { fill: var(--coral); stroke: #fff; stroke-width: 2; } .history-memory-point { fill: var(--blue); stroke: #fff; stroke-width: 2; }
+footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; line-height: 1.7; margin-top: 26px; padding-top: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">PC HEALTH REPORT</p>
+  <h1>电脑健康诊断报告</h1>
+  <p class="meta">
+    生成时间：2026-10-08 10:09:06<br>
+    设备：Lenovo LNVNB161216（DESKTOP-3PNHALR · Windows_NT 10.0.19045）<br>
+    操作系统：Windows 10.0.19045 · 处理器：Intel(R) Core(TM) i5-10200H CPU @ 2.40GHz · 已运行 1小时
+  </p>
+  <div class="score">
+    <strong>90</strong>
+    <div><span>建议持续关注</span><p>本次分析发现 1 项需要关注。建议优先处理高风险项目，再观察实时曲线是否恢复。</p></div>
+  </div>
+
+  <h2>一、关键指标</h2>
+  <table><tbody><tr><th>处理器</th><td class="value">0%</td><td>8 个逻辑处理器 · Intel(R) Core(TM) i5-10200H CPU @ 2.40GHz</td></tr><tr><th>内存</th><td class="value">69%</td><td>11.0 GB / 15.9 GB · 3200 MT/s</td></tr><tr><th>温度</th><td class="value">79.0°C</td><td>来源 LibreHardwareMonitor · 12 个传感器</td></tr><tr><th>系统盘</th><td class="value">43.1 GB 可用</td><td>C: 共 149.6 GB</td></tr><tr><th>磁盘健康</th><td class="value">1 块物理磁盘</td><td>SKHynix_HFS512GD9TNI-L2A0B Healthy · 寿命 100% · 44°C</td></tr><tr><th>网络</th><td class="value">645 B/s 下载 / 308 B/s 上传</td><td>来源 Windows 性能计数器</td></tr><tr><th>电池</th><td class="value">99%</td><td>已读取电池信息</td></tr><tr><th>运行时间</th><td class="value">1小时</td><td>开机于 2026-10-08 08:36:04</td></tr><tr><th>整机</th><td class="value">Lenovo LNVNB161216</td><td>NVIDIA GeForce GTX 1650 Ti · 4.0 GB 显存</td></tr></tbody></table>
+
+  <h2>二、异常峰值回溯</h2>
+  <h3>本次开机以来</h3><table class="grid"><thead><tr><th>指标</th><th>峰值</th><th>发生时间</th><th>当时占用最高的程序</th></tr></thead><tbody><tr><th>CPU</th><td class="value">64.3%</td><td>2026-10-08 10:09:05</td><td>DeepSeek Harness（CPU 6%）</td></tr><tr><th>内存</th><td class="value">69%</td><td>2026-10-08 10:09:05</td><td>DeepSeek Harness（占用 640.9 MB）</td></tr><tr><th>温度</th><td class="value">81°C</td><td>2026-10-08 10:09:00</td><td>—</td></tr></tbody></table>
+  <h3>最近 24 小时</h3><table class="grid"><thead><tr><th>指标</th><th>峰值</th><th>发生时间</th><th>当时占用最高的程序</th></tr></thead><tbody><tr><th>CPU</th><td class="value">64.3%</td><td>2026-10-08 10:09:05</td><td>DeepSeek Harness（CPU 6%）</td></tr><tr><th>内存</th><td class="value">69%</td><td>2026-10-08 10:09:05</td><td>DeepSeek Harness（占用 640.9 MB）</td></tr><tr><th>温度</th><td class="value">81°C</td><td>2026-10-08 10:09:00</td><td>—</td></tr></tbody></table>
+  <h3>异常峰值事件（最近 0 条）</h3>
+  <p>没有记录到超过阈值的异常峰值。</p>
+
+  <h2>三、实时趋势快照</h2>
+  <div class="charts">
+    <div class="chart"><h3>处理器与内存（最近约 2 分钟）</h3><svg id="chart" class="chart"><line x1="40" x2="892" y1="14" y2="14" stroke="#e5ebe6"/><text x="4" y="18" fill="#819087" font-size="11">100</text><line x1="40" x2="892" y1="79.25" y2="79.25" stroke="#e5ebe6"/><text x="4" y="83.25" fill="#819087" font-size="11">75</text><line x1="40" x2="892" y1="144.5" y2="144.5" stroke="#e5ebe6"/><text x="4" y="148.5" fill="#819087" font-size="11">50</text><line x1="40" x2="892" y1="209.75" y2="209.75" stroke="#e5ebe6"/><text x="4" y="213.75" fill="#819087" font-size="11">25</text><line x1="40" x2="892" y1="275" y2="275" stroke="#e5ebe6"/><text x="4" y="279" fill="#819087" font-size="11">0</text><svg points="40,275" id="cpuLine"/><svg points="40,94.43352027237633" id="memoryLine"/></svg></div>
+    <div class="chart"><h3>网络上下行（最近约 40 次采样）</h3><svg id="networkChart" class="chart"><line x1="86" x2="884" y1="16" y2="16" stroke="#e5ebe6" stroke-dasharray="3 6"/><text x="74" y="20" text-anchor="end" fill="#819087" font-size="11">4 KB/s</text><line x1="86" x2="884" y1="63" y2="63" stroke="#e5ebe6" stroke-dasharray="3 6"/><text x="74" y="67" text-anchor="end" fill="#819087" font-size="11">3 KB/s</text><line x1="86" x2="884" y1="110" y2="110" stroke="#e5ebe6" stroke-dasharray="3 6"/><text x="74" y="114" text-anchor="end" fill="#819087" font-size="11">2 KB/s</text><line x1="86" x2="884" y1="157" y2="157" stroke="#e5ebe6" stroke-dasharray="3 6"/><text x="74" y="161" text-anchor="end" fill="#819087" font-size="11">1 KB/s</text><line x1="86" x2="884" y1="204" y2="204" stroke="#d8e2da"/><text x="74" y="208" text-anchor="end" fill="#819087" font-size="11">0 KB/s</text><svg points="" id="networkDownArea"/><svg points="" id="networkUpArea"/><svg points="" id="networkDownLine"/><svg points="" id="networkUpLine"/></svg></div>
+    <div class="chart"><h3>历史峰值曲线（最近一小时）</h3><svg id="historyChart" class="chart"><line x1="46" x2="886" y1="14" y2="14" stroke="#e5ebe6" stroke-dasharray="3 6"/><text x="36" y="18" text-anchor="end" fill="#819087" font-size="11">100%</text><line x1="46" x2="886" y1="57" y2="57" stroke="#e5ebe6" stroke-dasharray="3 6"/><text x="36" y="61" text-anchor="end" fill="#819087" font-size="11">75%</text><line x1="46" x2="886" y1="100" y2="100" stroke="#e5ebe6" stroke-dasharray="3 6"/><text x="36" y="104" text-anchor="end" fill="#819087" font-size="11">50%</text><line x1="46" x2="886" y1="143" y2="143" stroke="#e5ebe6" stroke-dasharray="3 6"/><text x="36" y="147" text-anchor="end" fill="#819087" font-size="11">25%</text><line x1="46" x2="886" y1="186" y2="186" stroke="#d8e2da"/><text x="36" y="190" text-anchor="end" fill="#819087" font-size="11">0%</text><svg points="46.0,75.6 886.0,75.4" id="historyCpuLine"/><svg points="46.0,67.7 886.0,67.3" id="historyMemoryLine"/></svg></div>
+  </div>
+
+  <h2>四、网络与带宽</h2>
+  <table><tbody>
+    <tr><th>当前速率</th><td class="value">↓ 645 B/s · ↑ 308 B/s</td><td>来源 Windows 性能计数器</td></tr>
+  </tbody></table>
+  <h3>程序网络占用前 2 名</h3><table class="grid"><thead><tr><th>程序</th><th>网络速率</th><th>连接数</th><th>主要远端</th></tr></thead><tbody><tr><td>powershell</td><td class="value">55.4 KB/s</td><td>0</td><td>—</td></tr><tr><td>conhost</td><td class="value">2.7 KB/s</td><td>0</td><td>—</td></tr></tbody></table>
+
+  <h2>五、分析发现</h2>
+  <ul><li class="warn"><strong>最高温度 79.0°C</strong><span>温度处于需要观察的区间，持续高温可能影响性能和稳定性。</span><em>需关注</em></li><li class="good"><strong>CPU 当前占用 0%</strong><span>当前处理器负载处于日常使用范围。</span><em>正常</em></li><li class="good"><strong>内存使用 69%</strong><span>11.0 GB / 15.9 GB，当前余量正常。</span><em>正常</em></li><li class="good"><strong>磁盘健康正常</strong><span>1 块物理磁盘状态良好。</span><em>正常</em></li><li class="good"><strong>系统盘剩余 43.1 GB</strong><span>当前空间能够满足日常系统运行。</span><em>正常</em></li><li class="good"><strong>安全防护服务已读取</strong><span>1 项 Windows 防护服务处于运行状态。</span><em>正常</em></li><li class="good"><strong>电池状态正常，当前 99%</strong><span>当前读取到电池电量，未获取损耗率。</span><em>正常</em></li></ul>
+
+  <h2>六、处理建议</h2>
+  <ul><li class="suggestion"><strong>观察散热状态</strong><span>保持通风并观察温度曲线；如果低负载时仍长期偏高，建议清理风道并检查风扇。</span></li></ul>
+
+  <footer>
+    数据依据：温度来源：LibreHardwareMonitor · 物理磁盘：1 块 · 活动进程：12 个 · 采样时间：10:09:05<br>
+    历史记录：3 个采样点 · 保留 24 小时 · 每 5 秒采样一次<br>
+    所有数据只在本机读取，不会上传到网络。本报告由电脑使用观察器生成。
+  </footer>
+</main>
+</body>
+</html>
