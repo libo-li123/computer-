@@ -445,7 +445,7 @@ function drawSparkline(lineId, pointId, key) {
     return;
   }
   const width = 240;
-  const height = 76;
+  const height = 58;
   const inset = 4;
   const coords = points.map((item, index) => {
     const value = Math.max(0, Math.min(100, Number(item[key]) || 0));
@@ -1382,9 +1382,9 @@ function render(data) {
   const memory = data.memory.used / data.memory.total * 100;
   $("#host").textContent = `${data.host} · ${data.platform}`;
   $("#updated").textContent = `更新于 ${new Date(data.timestamp).toLocaleTimeString()}`;
-  $("#cpuValue").textContent = Math.round(data.cpu); $("#cpuBar").style.width = `${data.cpu}%`;
+  $("#cpuValue").textContent = Math.round(data.cpu);
   $("#cpuMeta").textContent = `${data.logicalCores} 个逻辑处理器`;
-  $("#memoryValue").textContent = Math.round(memory); $("#memoryBar").style.width = `${memory}%`;
+  $("#memoryValue").textContent = Math.round(memory);
   $("#memoryMeta").textContent = `${formatBytes(data.memory.used)} / ${formatBytes(data.memory.total)}`;
   $("#uptimeValue").textContent = formatUptime(data.uptime);
   const disk = data.disks[0];
@@ -1580,6 +1580,10 @@ function bindControls() {
   bindDashboardTabs();
   bindHealthCards();
   bindProcessControls();
+  $("#logout")?.addEventListener("click", async () => {
+    try { await fetch("/api/logout", { method: "POST" }); } catch {}
+    window.location.replace("/login");
+  });
   $("#historyToggle")?.addEventListener("click", () => {
     const body = $("#historyCollapseBody");
     const button = $("#historyToggle");

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>电脑使用观察器</title>
-  <link rel="stylesheet" href="/styles.css?v=20261008-report1">
+  <link rel="stylesheet" href="/styles.css?v=20261008-chart2">
 </head>
 <body>
   <main class="shell">
@@ -19,39 +19,34 @@
         <button id="analysisReportToggle" class="button secondary" aria-expanded="false" title="查看电脑健康分析报告，并导出 Markdown 或 HTML 报告">分析报告</button>
         <button id="ecoModeToggle" class="button secondary eco-toggle" aria-pressed="false" title="仅限制你明确选择的程序，随时可恢复">节能模式</button>
         <button id="export" class="button primary" title="一键导出结构化的 Markdown 诊断报告；HTML 网页快照与 JSON 可在分析报告中导出">导出快照</button>
+        <button id="logout" class="button secondary" title="退出当前登录">退出</button>
       </div>
     </header>
 
     <section class="metric-grid">
-      <article class="metric-card metric-card-main accent-coral">
-        <div class="metric-main-copy">
-          <div class="metric-head"><span>处理器</span><span class="metric-icon">CPU</span></div>
-          <div class="metric-reading"><strong id="cpuValue">--</strong><span class="unit">%</span></div>
-          <p id="cpuMeta">正在测量负载</p>
-        </div>
-        <div class="sparkline-box">
-          <svg id="cpuSparkline" class="sparkline" viewBox="0 0 240 76" role="img" aria-label="处理器最近实时使用率">
+      <article class="metric-card metric-card-resource accent-coral">
+        <div class="metric-head"><span>处理器</span><span class="metric-icon">CPU</span></div>
+        <div class="resource-reading"><div class="metric-reading"><strong id="cpuValue">--</strong><span class="unit">%</span></div><p id="cpuMeta">正在测量负载</p></div>
+        <div class="resource-chart-wrap">
+          <svg id="cpuSparkline" class="sparkline" viewBox="0 0 240 58" preserveAspectRatio="none" role="img" aria-label="处理器最近实时使用率">
+            <line class="resource-baseline" x1="2" y1="55" x2="238" y2="55"></line>
             <polyline id="cpuSparklineLine" class="sparkline-line" points=""></polyline>
-            <circle id="cpuSparklinePoint" class="sparkline-point" r="4" cx="0" cy="0"></circle>
+            <circle id="cpuSparklinePoint" class="sparkline-point" r="3.5" cx="0" cy="0"></circle>
           </svg>
-          <span>最近实时波动</span>
         </div>
-        <div class="bar"><i id="cpuBar"></i></div>
+        <span class="resource-chart-caption"><i></i>实时使用趋势</span>
       </article>
-      <article class="metric-card metric-card-main accent-lime">
-        <div class="metric-main-copy">
-          <div class="metric-head"><span>内存</span><span class="metric-icon">RAM</span></div>
-          <div class="metric-reading"><strong id="memoryValue">--</strong><span class="unit">%</span></div>
-          <p id="memoryMeta">正在读取内存</p>
-        </div>
-        <div class="sparkline-box">
-          <svg id="memorySparkline" class="sparkline" viewBox="0 0 240 76" role="img" aria-label="内存最近实时使用率">
+      <article class="metric-card metric-card-resource accent-lime">
+        <div class="metric-head"><span>内存</span><span class="metric-icon">RAM</span></div>
+        <div class="resource-reading"><div class="metric-reading"><strong id="memoryValue">--</strong><span class="unit">%</span></div><p id="memoryMeta">正在读取内存</p></div>
+        <div class="resource-chart-wrap">
+          <svg id="memorySparkline" class="sparkline" viewBox="0 0 240 58" preserveAspectRatio="none" role="img" aria-label="内存最近实时使用率">
+            <line class="resource-baseline" x1="2" y1="55" x2="238" y2="55"></line>
             <polyline id="memorySparklineLine" class="sparkline-line" points=""></polyline>
-            <circle id="memorySparklinePoint" class="sparkline-point" r="4" cx="0" cy="0"></circle>
+            <circle id="memorySparklinePoint" class="sparkline-point" r="3.5" cx="0" cy="0"></circle>
           </svg>
-          <span>最近实时波动</span>
         </div>
-        <div class="bar"><i id="memoryBar"></i></div>
+        <span class="resource-chart-caption"><i></i>实时使用趋势</span>
       </article>
       <article class="metric-card metric-card-secondary accent-blue">
         <div class="metric-head"><span>系统概览</span><span class="metric-icon">STATUS</span></div>
@@ -71,8 +66,17 @@
       </article>
       <article class="metric-card metric-card-network accent-yellow">
         <div class="metric-head"><span>网络实时监控</span><span class="metric-icon">NET</span></div>
-        <div class="network-mini-readings"><div><span>↓</span><strong id="networkMiniDownload">--</strong></div><div><span>↑</span><strong id="networkMiniUpload">--</strong></div></div>
-        <svg id="networkMiniChart" class="network-mini-chart" viewBox="0 0 240 58" role="img" aria-label="网络上下行最近实时速率"><polyline id="networkMiniDownLine" points=""></polyline><polyline id="networkMiniUpLine" points=""></polyline></svg>
+        <div class="network-mini-readings">
+          <div class="network-mini-reading is-download"><span><i></i>下载</span><strong id="networkMiniDownload">--</strong></div>
+          <div class="network-mini-reading is-upload"><span><i></i>上传</span><strong id="networkMiniUpload">--</strong></div>
+        </div>
+        <div class="network-mini-chart-wrap">
+          <svg id="networkMiniChart" class="network-mini-chart" viewBox="0 0 240 58" preserveAspectRatio="none" role="img" aria-label="网络上下行最近实时速率">
+            <line class="network-mini-baseline" x1="2" y1="55" x2="238" y2="55"></line>
+            <polyline id="networkMiniDownLine" class="network-mini-line network-mini-down-line" points=""></polyline>
+            <polyline id="networkMiniUpLine" class="network-mini-line network-mini-up-line" points=""></polyline>
+          </svg>
+        </div>
         <p id="networkMiniMeta">等待采样</p>
       </article>
     </section>
@@ -307,6 +311,6 @@
       <div class="eco-dialog-actions"><button class="button secondary" value="cancel">取消</button><button id="ecoConfirm" class="button primary" value="default">启用节能模式</button></div>
     </form>
   </dialog>
-  <script src="/app.js?v=20261008-report1"></script>
+  <script src="/app.js?v=20261008-chart2"></script>
 </body>
 </html>

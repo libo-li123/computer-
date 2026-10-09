@@ -3,12 +3,101 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const net = require("net");
+const crypto = require("crypto");
 const { execFile, spawn } = require("child_process");
 
 const root = __dirname;
 const port = Number(process.env.PORT || 5173);
 const host = process.env.HOST || "0.0.0.0";
 const healthCachePath = path.join(root, "health-cache.json");
+const authConfigPath = path.join(root, "auth-config.json");
+const loginInfoPath = path.join(root, "登录信息.txt");
+const sessionCookieName = "pc_observer_session";
+const sessionLifetimeMs = 12 * 60 * 60 * 1000;
+const sessions = new Map();
+const loginAttempts = new Map();
+
+function passwordHash(password, salt) {
+  return crypto.scryptSync(String(password), salt, 64).toString("hex");
+}
+
+function updateLoginInfoAddress() {
+  try {
+    const current = fs.readFileSync(loginInfoPath, "utf8");
+    const updated = current.replace(/登录地址：[^\r\n]+/, `登录地址：http://127.0.0.1:${port}/`);
+    if (updated !== current) fs.writeFileSync(loginInfoPath, updated, { encoding: "utf8", mode: 0o600 });
+  } catch {}
+}
+
+function loadOrCreateAuthConfig() {
+  const environmentPassword = String(process.env.PC_OBSERVER_PASSWORD || "");
+  const environmentUsername = String(process.env.PC_OBSERVER_USERNAME || "admin").trim() || "admin";
+  if (environmentPassword) {
+    const salt = crypto.randomBytes(16).toString("hex");
+    return { username: environmentUsername, salt, passwordHash: passwordHash(environmentPassword, salt) };
+  }
+  try {
+    const saved = JSON.parse(fs.readFileSync(authConfigPath, "utf8"));
+    if (saved.username && saved.salt && saved.passwordHash) {
+      updateLoginInfoAddress();
+      return saved;
+    }
+  } catch {}
+  const username = "admin";
+  const password = crypto.randomBytes(12).toString("base64url");
+  const salt = crypto.randomBytes(16).toString("hex");
+  const config = { username, salt, passwordHash: passwordHash(password, salt) };
+  fs.writeFileSync(authConfigPath, `${JSON.stringify(config, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+  fs.writeFileSync(loginInfoPath, `电脑健康检测平台登录信息\r\n\r\n账号：${username}\r\n密码：${password}\r\n\r\n登录地址：http://127.0.0.1:${port}/\r\n`, { encoding: "utf8", mode: 0o600 });
+  return config;
+}
+
+const authConfig = loadOrCreateAuthConfig();
+
+function requestCookies(request) {
+  return Object.fromEntries(String(request.headers.cookie || "").split(";").map((item) => {
+    const index = item.indexOf("=");
+    if (index < 0) return ["", ""];
+    const raw = item.slice(index + 1).trim();
+    try { return [item.slice(0, index).trim(), decodeURIComponent(raw)]; }
+    catch { return [item.slice(0, index).trim(), raw]; }
+  }).filter(([name]) => name));
+}
+
+function requestSession(request) {
+  const token = requestCookies(request)[sessionCookieName];
+  const session = token ? sessions.get(token) : null;
+  if (!session) return null;
+  if (session.expiresAt <= Date.now()) {
+    sessions.delete(token);
+    return null;
+  }
+  return { token, ...session };
+}
+
+function credentialsMatch(username, password) {
+  if (String(username) !== authConfig.username || typeof password !== "string") return false;
+  const expected = Buffer.from(authConfig.passwordHash, "hex");
+  const actual = Buffer.from(passwordHash(password, authConfig.salt), "hex");
+  return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+}
+
+function loginAttemptState(request) {
+  const key = request.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  const current = loginAttempts.get(key);
+  if (!current || current.resetAt <= now) {
+    const fresh = { key, count: 0, resetAt: now + 10 * 60 * 1000 };
+    loginAttempts.set(key, fresh);
+    return fresh;
+  }
+  return { key, ...current };
+}
+
+function sendRedirect(response, location) {
+  response.writeHead(302, { Location: location, "Cache-Control": "no-store" });
+  response.end();
+}
 let lastCpu = null;
 let temperatureRefreshRunning = false;
 let processRefreshRunning = false;
@@ -2020,6 +2109,59 @@ async function setEcoMode(enabled, pids, limitProcesses = true) {
 
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
+  const session = requestSession(request);
+  if ((url.pathname === "/login" || url.pathname === "/login.html") && request.method === "GET") {
+    if (session) return sendRedirect(response, "/");
+    const file = path.join(root, "login.html");
+    return fs.readFile(file, (error, content) => {
+      if (error) return sendJson(response, { error: "登录页不可用" }, 500);
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+      response.end(content);
+    });
+  }
+  if (url.pathname === "/login.css" && request.method === "GET") {
+    const file = path.join(root, "login.css");
+    return fs.readFile(file, (error, content) => {
+      if (error) return sendJson(response, { error: "Not found" }, 404);
+      response.writeHead(200, { "Content-Type": "text/css; charset=utf-8", "Cache-Control": "no-store" });
+      response.end(content);
+    });
+  }
+  if (url.pathname === "/api/login" && request.method === "POST") {
+    const attempt = loginAttemptState(request);
+    if (attempt.count >= 5) return sendJson(response, { ok: false, message: "登录失败次数过多，请 10 分钟后再试" }, 429);
+    try {
+      const payload = await readJson(request);
+      if (!credentialsMatch(payload.username, payload.password)) {
+        loginAttempts.set(attempt.key, { count: attempt.count + 1, resetAt: attempt.resetAt });
+        return sendJson(response, { ok: false, message: "账号或密码错误" }, 401);
+      }
+      loginAttempts.delete(attempt.key);
+      const token = crypto.randomBytes(32).toString("base64url");
+      sessions.set(token, { username: authConfig.username, expiresAt: Date.now() + sessionLifetimeMs });
+      response.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Set-Cookie": `${sessionCookieName}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${Math.floor(sessionLifetimeMs / 1000)}`
+      });
+      return response.end(JSON.stringify({ ok: true }));
+    } catch (error) {
+      return sendJson(response, { ok: false, message: error.message }, 400);
+    }
+  }
+  if (!session) {
+    if (url.pathname.startsWith("/api/")) return sendJson(response, { ok: false, message: "请先登录" }, 401);
+    return sendRedirect(response, "/login");
+  }
+  if (url.pathname === "/api/logout" && request.method === "POST") {
+    sessions.delete(session.token);
+    response.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Set-Cookie": `${sessionCookieName}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`
+    });
+    return response.end(JSON.stringify({ ok: true }));
+  }
   if (url.pathname === "/api/stats") {
     return sendJson(response, getStats());
   }
@@ -2046,6 +2188,9 @@ const server = http.createServer(async (request, response) => {
     return sendJson(response, { ok: true, message: "检测已启动" });
   }
   const requested = url.pathname === "/" ? "/index.html" : url.pathname;
+  if (["/auth-config.json", "/登录信息.txt", "/.gitignore"].includes(requested)) {
+    return sendJson(response, { error: "Not found" }, 404);
+  }
   const file = path.normalize(path.join(root, requested));
   if (!file.startsWith(root)) return sendJson(response, { error: "Not found" }, 404);
   fs.readFile(file, (error, content) => {

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>登录 · 电脑健康检测平台</title>
+  <link rel="stylesheet" href="/login.css?v=20261008-auth1">
+</head>
+<body>
+  <main class="login-shell">
+    <section class="login-card">
+      <div class="brand-mark">PC</div>
+      <p class="eyebrow">PC HEALTH PLATFORM</p>
+      <h1>登录检测平台</h1>
+      <p class="intro">输入本机生成的管理员账号和密码，访问电脑状态与管理功能。</p>
+      <form id="loginForm">
+        <label><span>账号</span><input id="username" name="username" autocomplete="username" value="admin" required></label>
+        <label><span>密码</span><input id="password" name="password" type="password" autocomplete="current-password" required autofocus></label>
+        <p id="loginError" class="login-error" role="alert"></p>
+        <button id="loginButton" type="submit">登录</button>
+      </form>
+      <p class="login-hint">首次登录信息保存在运行电脑的“登录信息.txt”中。</p>
+    </section>
+  </main>
+  <script>
+    const form = document.getElementById("loginForm");
+    const error = document.getElementById("loginError");
+    const button = document.getElementById("loginButton");
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      error.textContent = "";
+      button.disabled = true;
+      button.textContent = "正在验证…";
+      try {
+        const response = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: form.username.value.trim(), password: form.password.value })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.message || "登录失败");
+        window.location.replace("/");
+      } catch (loginError) {
+        error.textContent = loginError.message;
+        button.disabled = false;
+        button.textContent = "登录";
+      }
+    });
+  </script>
+</body>
+</html>
