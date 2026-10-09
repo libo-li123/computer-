@@ -1,5 +1,5 @@
 ﻿{
-    "checkedAt":  "2026-10-09T01:42:53.6321037Z",
+    "checkedAt":  "2026-10-09T01:52:48.2394170Z",
     "batteryRead":  true,
     "battery":  [
                     {
@@ -69,86 +69,86 @@
                       {
                           "name":  "Code",
                           "pid":  14140,
-                          "cpuTime":  354.671875,
-                          "cpuPercent":  9,
-                          "memory":  461000704
+                          "cpuTime":  407.625,
+                          "cpuPercent":  1,
+                          "memory":  456978432
+                      },
+                      {
+                          "name":  "Doubao",
+                          "pid":  12072,
+                          "cpuTime":  86.578125,
+                          "cpuPercent":  0,
+                          "memory":  645455872
                       },
                       {
                           "name":  "LibreHardwareMonitor",
                           "pid":  8496,
-                          "cpuTime":  52.84375,
+                          "cpuTime":  59.546875,
                           "cpuPercent":  0,
-                          "memory":  20545536
+                          "memory":  38420480
                       },
                       {
                           "name":  "explorer",
                           "pid":  8604,
-                          "cpuTime":  37,
+                          "cpuTime":  46.359375,
                           "cpuPercent":  0,
-                          "memory":  208453632
+                          "memory":  188465152
                       },
                       {
                           "name":  "Code",
                           "pid":  16348,
-                          "cpuTime":  26.859375,
-                          "cpuPercent":  1,
-                          "memory":  150491136
-                      },
-                      {
-                          "name":  "Code",
-                          "pid":  8240,
-                          "cpuTime":  22.140625,
-                          "cpuPercent":  1,
-                          "memory":  482193408
+                          "cpuTime":  40.21875,
+                          "cpuPercent":  0,
+                          "memory":  159731712
                       },
                       {
                           "name":  "powershell",
                           "pid":  12420,
-                          "cpuTime":  20.53125,
+                          "cpuTime":  40.15625,
+                          "cpuPercent":  1,
+                          "memory":  159911936
+                      },
+                      {
+                          "name":  "Code",
+                          "pid":  8240,
+                          "cpuTime":  28.71875,
                           "cpuPercent":  0,
-                          "memory":  157192192
+                          "memory":  410234880
                       },
                       {
                           "name":  "LibreHardwareMonitor",
                           "pid":  19156,
-                          "cpuTime":  17.421875,
+                          "cpuTime":  27.5,
                           "cpuPercent":  0,
-                          "memory":  132636672
+                          "memory":  132820992
+                      },
+                      {
+                          "name":  "Doubao",
+                          "pid":  4548,
+                          "cpuTime":  24.609375,
+                          "cpuPercent":  0,
+                          "memory":  200409088
+                      },
+                      {
+                          "name":  "Weixin",
+                          "pid":  3608,
+                          "cpuTime":  19.078125,
+                          "cpuPercent":  0,
+                          "memory":  253186048
                       },
                       {
                           "name":  "chrome",
                           "pid":  18088,
-                          "cpuTime":  13.03125,
+                          "cpuTime":  19.0625,
                           "cpuPercent":  0,
-                          "memory":  289484800
-                      },
-                      {
-                          "name":  "TrafficMonitor",
-                          "pid":  11452,
-                          "cpuTime":  11.46875,
-                          "cpuPercent":  0,
-                          "memory":  8609792
+                          "memory":  274272256
                       },
                       {
                           "name":  "chrome",
                           "pid":  11120,
-                          "cpuTime":  10.984375,
+                          "cpuTime":  16.421875,
                           "cpuPercent":  0,
-                          "memory":  107798528
-                      },
-                      {
-                          "name":  "Code",
-                          "pid":  14192,
-                          "cpuTime":  9.6875,
-                          "cpuPercent":  0,
-                          "memory":  183033856
-                      },
-                      {
-                          "name":  "Code",
-                          "pid":  15676,
-                          "cpuTime":  9.546875,
-                          "cpuPercent":  0,
-                          "memory":  150491136
+                          "memory":  113192960
                       }
                   ]
 }
